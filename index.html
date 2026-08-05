@@ -64,6 +64,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 .storage-persist-btn{display:block;width:100%;padding:12px;border:2px solid var(--success);background:#fff;color:var(--success);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:12px;transition:all .2s}
 .storage-persist-btn:active{background:var(--success-light)}
 .storage-persist-btn.done{background:var(--success-light);border-color:var(--success-light);cursor:default}
+.storage-install-btn{display:block;width:100%;padding:12px;border:2px solid var(--primary);background:var(--primary);color:#fff;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.storage-install-btn:active{opacity:.85}
 .backup-divider{height:1px;background:var(--border);margin:16px 0}
 .backup-section-title{font-size:13px;color:var(--text-2);font-weight:600;margin-bottom:10px}
 .import-area{display:none}
@@ -603,9 +605,20 @@ input[type="date"]{font-family:inherit}
         浏览器清理缓存时可能丢失数据
       </div>
     </div>
-    <button class="storage-persist-btn" id="storagePersistBtn" onclick="requestPersistentStorage()">
-      🔒 开启数据保护
-    </button>
+    <div id="storageActions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+      <button class="storage-persist-btn" id="storagePersistBtn" onclick="requestPersistentStorage()">
+        🔒 开启数据保护
+      </button>
+      <button class="storage-install-btn" id="storageInstallBtn" onclick="installPWA()" style="display:none">
+        📲 安装到主屏幕（更强保护）
+      </button>
+    </div>
+    <div id="storageGuide" style="display:none;background:#FFF8E1;border:1px solid #FFE082;border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;line-height:1.7;color:#e65100">
+      <b>💡 浏览器拒绝了直接授权，请任选一种方式：</b><br><br>
+      <b>方式一（推荐）：</b>点击下方"安装到主屏幕"按钮，将工作台装成App。安装后浏览器自动开启数据保护。<br><br>
+      <b>方式二：</b>在浏览器中多使用几次工作台（录入、搜索、查看），积累使用记录后重试。
+    </div>
+    <div id="storageEstimate" style="font-size:12px;color:var(--text-3);padding:0 4px;margin-top:-4px"></div>
     <div class="backup-tip">开启后，浏览器将尽可能保留工作台数据，即使手机存储空间不足也不会被自动清除。</div>
 
     <div class="backup-divider"></div>
@@ -2397,23 +2410,34 @@ function forceRefresh(){
   });
 }
 
+var deferredInstallPrompt = null;
+
+// Capture PWA install prompt
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  // Show install button in data protection section
+  var installBtn = document.getElementById('storageInstallBtn');
+  if(installBtn) installBtn.style.display = 'block';
+});
+
 function autoRequestPersist(){
   if(!navigator.storage || !navigator.storage.persist) return;
   navigator.storage.persisted().then(function(isPersisted){
-    if(isPersisted) return; // Already protected
-    // Auto-request — if the site has enough user engagement, browser may auto-grant
-    navigator.storage.persist().then(function(granted){
-      if(granted){
-        showStorageStatus('protected');
-        document.getElementById('storagePersistBtn').style.display = 'none';
-      }
-    }).catch(function(){});
+    if(isPersisted){
+      showStorageStatus('protected');
+      return;
+    }
+    // Don't auto-request — requires user gesture; just check status
   }).catch(function(){});
 }
 
 function checkPersistentStorage(){
+  var installBtn = document.getElementById('storageInstallBtn');
+  // Show install button if we have the deferred prompt
+  if(deferredInstallPrompt && installBtn) installBtn.style.display = 'block';
+  
   if(!navigator.storage || !navigator.storage.persisted){
-    // Browser doesn't support persistent storage API
     showStorageStatus('unsupported');
     return;
   }
@@ -2422,50 +2446,89 @@ function checkPersistentStorage(){
   }).catch(function(){
     showStorageStatus('unprotected');
   });
+  
+  // Always show storage estimate
+  showStorageEstimate();
+}
+
+function showStorageEstimate(){
+  var el = document.getElementById('storageEstimate');
+  if(!el || !navigator.storage || !navigator.storage.estimate) return;
+  navigator.storage.estimate().then(function(est){
+    el.textContent = '💾 已用 ' + formatBytes(est.usage) + ' / ' + formatBytes(est.quota);
+  }).catch(function(){});
 }
 
 function requestPersistentStorage(){
   var btn = document.getElementById('storagePersistBtn');
   var statusEl = document.getElementById('storageStatus');
+  var guideEl = document.getElementById('storageGuide');
+  
   if(!navigator.storage || !navigator.storage.persist){
     btn.textContent = '当前浏览器不支持此功能';
     btn.className = 'storage-persist-btn done';
     return;
   }
+  
   btn.textContent = '正在申请...';
   btn.disabled = true;
+  
   navigator.storage.persist().then(function(granted){
     if(granted){
       showStorageStatus('protected');
       btn.textContent = '✅ 数据保护已开启';
       btn.className = 'storage-persist-btn done';
       btn.disabled = true;
-      // Also try to estimate storage
-      if(navigator.storage.estimate){
-        navigator.storage.estimate().then(function(est){
-          statusEl.querySelector('.ss-text').innerHTML = '<b>数据已受保护 ✅</b>已使用 ' + formatBytes(est.usage) + ' / ' + formatBytes(est.quota);
-        });
-      }
+      if(guideEl) guideEl.style.display = 'none';
+      showStorageEstimate();
+      navigator.storage.estimate().then(function(est){
+        statusEl.querySelector('.ss-text').innerHTML = '<b>数据已受保护 ✅</b>已使用 ' + formatBytes(est.usage) + ' / ' + formatBytes(est.quota);
+      });
     } else {
-      showStorageStatus('unprotected');
-      btn.textContent = '🔒 再次申请保护';
+      // DENIED — show guide and retry options
+      showStorageStatus('needInstall');
+      btn.textContent = '🔄 稍后重试（点击此处）';
       btn.disabled = false;
-      statusEl.querySelector('.ss-text').innerHTML = '<b>申请未通过</b>浏览器的数据保护可能需要更多用户交互才能授权。请将本页"添加到主屏幕"后重试。';
+      btn.onclick = function(){
+        btn.textContent = '正在重试...';
+        btn.disabled = true;
+        // Wait 3s to let browser accumulate engagement
+        setTimeout(function(){
+          requestPersistentStorage();
+        }, 3000);
+      };
     }
   }).catch(function(){
     showStorageStatus('unprotected');
     btn.textContent = '🔒 开启数据保护';
     btn.disabled = false;
+    btn.onclick = requestPersistentStorage;
   });
 }
 
 function showStorageStatus(type){
   var statusEl = document.getElementById('storageStatus');
   var btn = document.getElementById('storagePersistBtn');
+  var guideEl = document.getElementById('storageGuide');
+  var installBtn = document.getElementById('storageInstallBtn');
+  
   if(type === 'protected'){
     statusEl.className = 'storage-status protected';
     statusEl.querySelector('.ss-icon').textContent = '🛡️';
+    statusEl.querySelector('.ss-text').innerHTML = '<b>数据已受保护 ✅</b>浏览器不会自动清除工作台数据';
     btn.style.display = 'none';
+    if(installBtn) installBtn.style.display = 'none';
+    if(guideEl) guideEl.style.display = 'none';
+  } else if(type === 'needInstall'){
+    statusEl.className = 'storage-status unprotected';
+    statusEl.querySelector('.ss-icon').textContent = '⚠️';
+    statusEl.querySelector('.ss-text').innerHTML = '<b>申请未通过</b>浏览器需要你"安装到主屏幕"后才能开启数据保护';
+    btn.style.display = 'block';
+    // Show install button if prompted, otherwise show guide
+    if(deferredInstallPrompt && installBtn){
+      installBtn.style.display = 'block';
+    }
+    if(guideEl) guideEl.style.display = 'block';
   } else if(type === 'unsupported'){
     statusEl.className = 'storage-status unprotected';
     statusEl.querySelector('.ss-icon').textContent = 'ℹ️';
@@ -2473,9 +2536,60 @@ function showStorageStatus(type){
     btn.textContent = '当前浏览器不支持';
     btn.className = 'storage-persist-btn done';
     btn.disabled = true;
+    if(installBtn) installBtn.style.display = 'none';
+    if(guideEl) guideEl.style.display = 'none';
   } else {
     statusEl.className = 'storage-status unprotected';
     statusEl.querySelector('.ss-icon').textContent = '⚠️';
+    statusEl.querySelector('.ss-text').innerHTML = '<b>数据未受保护</b>浏览器清理缓存时可能丢失数据';
+    btn.style.display = 'block';
+    if(guideEl) guideEl.style.display = 'none';
+  }
+}
+
+function installPWA(){
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(function(choice){
+      if(choice.outcome === 'accepted'){
+        // User installed — now persist should work
+        var btn = document.getElementById('storagePersistBtn');
+        btn.textContent = '✅ 已安装，现在开启保护';
+        btn.className = 'storage-persist-btn done';
+        btn.disabled = true;
+        // Auto-retry persist after install
+        setTimeout(function(){
+          if(navigator.storage && navigator.storage.persist){
+            navigator.storage.persist().then(function(granted){
+              if(granted){
+                showStorageStatus('protected');
+              } else {
+                showStorageStatus('needInstall');
+              }
+            });
+          }
+        }, 2000);
+      }
+      deferredInstallPrompt = null;
+      var installBtn = document.getElementById('storageInstallBtn');
+      if(installBtn) installBtn.style.display = 'none';
+    });
+  } else {
+    // Fallback: show browser-specific instructions
+    var ua = navigator.userAgent || '';
+    var isIOS = /iPhone|iPad|iPod/.test(ua);
+    var isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
+    var isAndroid = /Android/.test(ua);
+    var guideEl = document.getElementById('storageGuide');
+    if(isIOS){
+      guideEl.innerHTML = '<b>💡 iOS安装方式：</b><br>Safari浏览器底部工具栏 → 分享图标（⬆） → "添加到主屏幕"';
+    } else if(isAndroid){
+      guideEl.innerHTML = '<b>💡 Android安装方式：</b><br>Chrome浏览器右上角 ⋮ → "添加到主屏幕" 或 "安装应用"';
+    } else {
+      guideEl.innerHTML = '<b>💡 安装方式：</b><br>浏览器菜单 → "安装" 或 "添加到主屏幕"';
+    }
+    guideEl.style.display = 'block';
+    showStorageStatus('needInstall');
   }
 }
 
