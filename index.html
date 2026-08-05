@@ -176,7 +176,7 @@ input[type="date"]{font-family:inherit}
 .day-table td{padding:7px 4px;border-top:1px solid #f0f0f0;vertical-align:middle;word-break:break-all}
 .day-table td .sub{font-size:10px;color:var(--text-3);font-weight:400;display:block;margin-top:1px}
 .day-table td .amt{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.day-table .row-monthly td{color:var(--blue)}
+.day-table .row-monthly-unpaid td{color:var(--blue)}
 .day-table .row-unpaid td{color:var(--red)}
 .day-table .row-pending td{color:#e6a000}
 .day-table .act-btns{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}
@@ -1479,14 +1479,17 @@ function renderRecords(){
         var rowClass = '';
         var dotClass = 'green';
         var statusText = '已付';
-        if(r.isMonthly){
-          rowClass = 'row-monthly';
+        if(r.isMonthly && !item.isPaid){
+          rowClass = 'row-monthly-unpaid';
           dotClass = 'blue';
-          statusText = item.isPaid ? '月结·已付' : '月结';
-        } else if(!item.isPaid){
+          statusText = '月结';
+        } else if(!r.isMonthly && !item.isPaid){
           rowClass = 'row-unpaid';
           dotClass = 'red';
           statusText = '未付';
+        } else if(r.isMonthly && item.isPaid){
+          dotClass = 'blue';
+          statusText = '月结·已付';
         }
 
         var paidBtnText = item.isPaid ? '撤付' : '付款';
@@ -1783,7 +1786,7 @@ function doSearch(){
     '</tr></thead><tbody>';
 
   matched.forEach(function(it){
-    var rowClass = it.isMonthly ? 'row-monthly' : (!it.isPaid ? 'row-unpaid' : '');
+    var rowClass = (it.isMonthly && !it.isPaid) ? 'row-monthly-unpaid' : (!it.isMonthly && !it.isPaid ? 'row-unpaid' : '');
     if(it.amount === null || it.amount === undefined) rowClass += ' row-pending';
     var statusBadge = '';
     if(it.isMonthly) statusBadge += '<span class="badge monthly">月结</span> ';
