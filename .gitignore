@@ -1,0 +1,4 @@
+.workbuddy/
+check_syntax.js
+gen_icons.py
+make_standalone.py

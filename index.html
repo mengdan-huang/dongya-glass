@@ -1,0 +1,2530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1976D2">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="东亚玻璃">
+<title>东亚汽车玻璃 · 销售工作台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --primary:#1976D2;--primary-light:#BBDEFB;--primary-dark:#0D47A1;
+  --danger:#d32f2f;--danger-light:#FFEBEE;
+  --success:#2e7d32;--success-light:#E8F5E9;
+  --warning:#f57c00;--warning-light:#FFF3E0;
+  --blue:#1976D2;--red:#d32f2f;
+  --bg:#f0f2f5;--card:#ffffff;--text:#1a1a1a;--text-2:#666;--text-3:#999;
+  --border:#e0e0e0;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08);
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html{font-size:16px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden}
+
+/* ===== 顶部标题栏 ===== */
+.topbar{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:calc(12px + var(--safe-top)) 16px 14px;text-align:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(25,118,210,.3);position:relative}
+.topbar h1{font-size:18px;font-weight:600;letter-spacing:1px}
+.topbar .sub{font-size:11px;opacity:.8;margin-top:2px}
+.topbar .gear{position:absolute;right:14px;top:calc(50% + var(--safe-top)/2);transform:translateY(-30%);font-size:20px;cursor:pointer;opacity:.85;transition:opacity .2s;padding:6px}
+.topbar .gear:active{opacity:1}
+
+/* ===== 备份面板 ===== */
+.backup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:flex-end;justify-content:center}
+.backup-overlay.show{display:flex}
+.backup-panel{background:#fff;width:100%;max-width:500px;border-radius:16px 16px 0 0;padding:20px 16px calc(20px + var(--safe-bottom));animation:slideUp .3s ease;max-height:85vh;overflow-y:auto}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.backup-panel .bp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.backup-panel .bp-header h3{font-size:17px;font-weight:600}
+.backup-panel .bp-close{background:none;border:none;font-size:24px;color:var(--text-3);cursor:pointer;padding:4px;line-height:1}
+.backup-stats{background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;justify-content:space-around}
+.backup-stats .stat-item{text-align:center}
+.backup-stats .stat-item .stat-val{font-size:20px;font-weight:700;color:var(--primary)}
+.backup-stats .stat-item .stat-lbl{font-size:11px;color:var(--text-2);margin-top:2px}
+.backup-btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s}
+.backup-btn:active{transform:scale(.98)}
+.backup-btn.export{background:var(--primary);color:#fff}
+.backup-btn.copy{background:var(--card);color:var(--primary);border:1.5px solid var(--primary)}
+.backup-btn.import{background:var(--success);color:#fff}
+.backup-btn.clear{background:var(--card);color:var(--danger);border:1.5px solid var(--danger)}
+.backup-btn .b-icon{font-size:18px}
+.backup-tip{font-size:12px;color:var(--text-3);line-height:1.6;margin-top:4px;padding:0 4px}
+.backup-divider{height:1px;background:var(--border);margin:16px 0}
+.backup-section-title{font-size:13px;color:var(--text-2);font-weight:600;margin-bottom:10px}
+.import-area{display:none}
+.import-area.show{display:block}
+.import-area textarea{width:100%;min-height:120px;padding:12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#fafafa;resize:vertical;font-family:monospace;line-height:1.5}
+.import-area textarea:focus{outline:none;border-color:var(--primary);background:#fff}
+.backup-file-input{display:none}
+
+/* ===== 汇总卡片 ===== */
+.summary{display:flex;gap:10px;padding:12px 14px 4px}
+.summary-card{flex:1;background:var(--card);border-radius:var(--radius);padding:14px 12px;box-shadow:var(--shadow);text-align:center;position:relative;overflow:hidden}
+.summary-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.summary-card.total::before{background:var(--primary)}
+.summary-card.unpaid::before{background:var(--danger)}
+.summary-card .label{font-size:12px;color:var(--text-2);margin-bottom:4px}
+.summary-card .value{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.summary-card.total .value{color:var(--primary)}
+.summary-card.unpaid .value{color:var(--danger)}
+.summary-card .unit{font-size:13px;font-weight:400;margin-left:2px}
+
+/* ===== 标签页内容区 ===== */
+.tab-content{display:none;padding:12px 14px}
+.tab-content.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== 表单 ===== */
+.form-card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px}
+.form-group{margin-bottom:14px}
+.form-group:last-child{margin-bottom:0}
+.form-group label{display:block;font-size:13px;color:var(--text-2);margin-bottom:6px;font-weight:500}
+.form-group label .req{color:var(--danger);margin-left:2px}
+.form-input,.form-select{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;background:#fafafa;transition:border-color .2s;font-family:inherit;color:var(--text)}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--primary);background:#fff}
+.form-input::placeholder{color:var(--text-3)}
+.form-row{display:flex;gap:10px}
+.form-row .form-group{flex:1}
+
+/* 日期输入 */
+input[type="date"]{font-family:inherit}
+
+/* 开关样式 */
+.switch-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+.switch-row .switch-label{font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px}
+.switch-row .switch-label .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.switch-row .switch-label .dot.blue{background:var(--blue)}
+.switch-row .switch-label .dot.red{background:var(--red)}
+.switch{position:relative;width:46px;height:26px;background:#ccc;border-radius:13px;cursor:pointer;transition:background .25s;flex-shrink:0}
+.switch.on{background:var(--primary)}
+.switch.off-danger{background:var(--danger)}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .25s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch.on::after{transform:translateX(20px)}
+
+/* 提交按钮 */
+.btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:transform .1s;letter-spacing:2px}
+.btn-submit:active{transform:scale(.98)}
+.btn-submit:disabled{opacity:.5}
+
+/* 动态车牌+货品 */
+.btn-add-plate{width:100%;padding:10px;background:transparent;border:2px dashed var(--primary);color:var(--primary);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;transition:background .15s}
+.btn-add-plate:active{background:#e3f2fd}
+.plate-group{background:var(--card);border-radius:10px;padding:12px;margin-bottom:10px;box-shadow:var(--shadow);border-left:3px solid var(--primary)}
+.plate-group.no-plate{border-left-color:#999}
+.pg-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.pg-header input{flex:1;text-transform:uppercase}
+.pg-header .pg-del{flex-shrink:0;width:30px;height:30px;border:none;background:#ffebee;color:var(--danger);border-radius:6px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.item-row{display:flex;gap:6px;align-items:flex-end;padding:6px 0;border-top:1px solid #f0f0f0;flex-wrap:wrap}
+.item-row:first-of-type{border-top:none}
+.item-row .ir-product{flex:1;min-width:100px}
+.item-row .ir-type{width:72px}
+.item-row .ir-brand{width:80px}
+.item-row .ir-amount{width:80px}
+.item-row .ir-qty{width:60px}
+.item-row label{font-size:10px;color:var(--text-3);display:block;margin-bottom:1px}
+.item-row .ir-paid{display:flex;align-items:center;gap:3px;padding-bottom:6px}
+.item-row .ir-paid input{width:16px;height:16px}
+.item-row .ir-paid label{font-size:11px;margin:0;white-space:nowrap}
+.item-row .ir-del{flex-shrink:0;width:28px;height:28px;border:none;background:#fff0f0;color:var(--danger);border-radius:6px;font-size:14px;cursor:pointer;margin-bottom:1px}
+.btn-add-item{width:100%;padding:6px;border:1px dashed #ccc;background:#fafafa;color:var(--text-2);border-radius:6px;font-size:12px;cursor:pointer;margin-top:4px}
+.btn-add-item:active{background:#f0f0f0}
+
+/* ===== 记录列表（按日表格） ===== */
+.day-group{margin-bottom:14px}
+.day-header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:linear-gradient(135deg,#e3f2fd,#bbdefb);border-radius:8px 8px 0 0;font-size:14px;font-weight:600;color:#1565c0}
+.day-header .day-total{font-size:13px;font-weight:700;color:var(--primary)}
+.day-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--card);border-radius:0 0 8px 8px;box-shadow:var(--shadow)}
+.day-table{width:100%;border-collapse:collapse;font-size:12px;min-width:420px}
+.day-table th{padding:6px 4px;background:#f5f5f5;color:var(--text-3);font-weight:500;text-align:left;white-space:nowrap;font-size:11px;border-bottom:1px solid #e0e0e0}
+.day-table th.center,.day-table td.center{text-align:center}
+.day-table th.right,.day-table td.right{text-align:right}
+.day-table td{padding:7px 4px;border-top:1px solid #f0f0f0;vertical-align:middle;word-break:break-all}
+.day-table td .sub{font-size:10px;color:var(--text-3);font-weight:400;display:block;margin-top:1px}
+.day-table td .amt{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.day-table .row-monthly td{color:var(--blue)}
+.day-table .row-unpaid td{color:var(--red)}
+.day-table .row-pending td{color:#e6a000}
+.day-table .act-btns{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}
+.day-table .act-btns button{font-size:10px;padding:3px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;white-space:nowrap}
+.day-table .act-btns button.success{color:var(--success);border-color:var(--success)}
+.day-table .act-btns button.danger{color:var(--danger);border-color:var(--danger)}
+.day-table .act-btns button.edit{color:#FF9800;border-color:#FF9800}
+.day-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px;vertical-align:middle}
+.day-dot.blue{background:var(--blue)}
+.day-dot.red{background:var(--red)}
+.day-dot.green{background:var(--success)}
+.record-card{background:var(--card);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:8px;border-left:4px solid transparent;transition:transform .1s}
+.record-card:active{transform:scale(.99)}
+.record-card.monthly{border-left-color:var(--blue)}
+.record-card.unpaid-nm{border-left-color:var(--red)}
+.record-card.paid-nm{border-left-color:var(--success)}
+.record-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.record-info{flex:1;min-width:0}
+.record-customer{font-size:15px;font-weight:600;margin-bottom:2px;word-break:break-all}
+.record-detail{font-size:13px;color:var(--text-2);word-break:break-all}
+.record-amount{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:8px}
+.record-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0}
+.record-date{font-size:12px;color:var(--text-3)}
+.record-actions{display:flex;gap:6px;align-items:center}
+.badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;white-space:nowrap}
+.badge.monthly{background:var(--primary-light);color:var(--primary-dark)}
+.badge.paid{background:var(--success-light);color:var(--success)}
+.badge.unpaid{background:var(--danger-light);color:var(--danger)}
+.btn-icon{background:none;border:none;padding:4px 8px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text-2);transition:background .15s}
+.btn-icon:active{background:#f0f0f0}
+.btn-icon.danger{color:var(--danger)}
+.btn-icon.success{color:var(--success)}
+
+/* 月结蓝色字体 */
+.text-blue{color:var(--blue)!important}
+/* 非月结未付款红色字体 */
+.text-red{color:var(--red)!important}
+
+/* 空状态 */
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-3)}
+.empty-state .icon{font-size:48px;margin-bottom:12px;opacity:.4}
+.empty-state .text{font-size:14px}
+
+/* ===== 搜索 ===== */
+.search-bar{display:flex;gap:8px;margin-bottom:12px}
+.search-type{display:flex;background:var(--card);border-radius:8px;overflow:hidden;flex-shrink:0;box-shadow:var(--shadow)}
+.search-type button{padding:10px 14px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;transition:all .2s}
+.search-type button.active{background:var(--primary);color:#fff}
+.search-input-wrap{flex:1;position:relative}
+.search-input-wrap input{width:100%;padding:11px 12px 11px 38px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;background:var(--card);box-shadow:var(--shadow);font-family:inherit}
+.search-input-wrap input:focus{outline:none;border-color:var(--primary)}
+.search-input-wrap .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text-3)}
+
+.search-summary{background:var(--card);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:10px;display:flex;justify-content:space-around}
+.search-summary-item{text-align:center}
+.search-summary-item .label{font-size:11px;color:var(--text-2);margin-bottom:2px}
+.search-summary-item .value{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.search-summary-item .value.blue{color:var(--primary)}
+.search-summary-item .value.green{color:var(--success)}
+
+/* ===== 提醒 ===== */
+.reminder-card{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);margin-bottom:8px;border-left:4px solid var(--warning)}
+.reminder-card.monthly-remind{border-left-color:var(--blue)}
+.reminder-card.nm-remind{border-left-color:var(--red)}
+.reminder-top{display:flex;justify-content:space-between;align-items:flex-start}
+.reminder-customer{font-size:15px;font-weight:600}
+.reminder-amount{font-size:17px;font-weight:700;color:var(--danger);font-variant-numeric:tabular-nums}
+.reminder-info{font-size:12px;color:var(--text-2);margin-top:4px}
+.reminder-badge{font-size:10px;padding:2px 8px;border-radius:10px;margin-top:6px;display:inline-block}
+.reminder-badge.monthly{background:var(--primary-light);color:var(--primary-dark)}
+.reminder-badge.nm{background:var(--danger-light);color:var(--danger)}
+.reminder-action{margin-top:8px;display:flex;gap:8px}
+.reminder-action button{flex:1;padding:8px;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;transition:transform .1s}
+.reminder-action button:active{transform:scale(.97)}
+.btn-mark-paid{background:var(--success);color:#fff}
+.btn-mark-paid:disabled{opacity:.4}
+.reminder-date{font-size:12px;color:var(--text-3);margin-top:4px}
+
+/* 月结按月分组 */
+.month-group{margin-top:6px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.month-group-header{background:var(--primary-light);padding:6px 10px;font-size:13px;font-weight:600;color:var(--primary-dark);display:flex;align-items:center;gap:6px}
+.month-group-header .month-group-count{font-size:11px;font-weight:400;opacity:.8}
+.month-group-header .month-group-amt{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
+.month-group-item{font-size:12px;color:var(--text-2);padding:4px 10px;border-top:1px solid var(--border)}
+
+.reminder-banner{background:var(--warning-light);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--warning);margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:500}
+
+/* ===== 月度选择器 ===== */
+.month-nav{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:var(--radius);padding:10px 14px;box-shadow:var(--shadow);margin-bottom:10px}
+.month-nav .mn-btn{background:none;border:none;font-size:18px;color:var(--primary);cursor:pointer;padding:4px 12px;border-radius:6px;transition:background .15s}
+.month-nav .mn-btn:active{background:var(--primary-light)}
+.month-nav .mn-label{font-size:15px;font-weight:600;color:var(--text)}
+.month-nav .mn-all{font-size:12px;color:var(--text-3);cursor:pointer;padding:4px 10px;border-radius:6px}
+.month-nav .mn-all.active{background:var(--primary);color:#fff}
+
+/* ===== 统计面板 ===== */
+.stat-section-title{font-size:13px;color:var(--text-2);margin:14px 2px 8px;font-weight:600;display:flex;align-items:center;gap:6px}
+.stat-cards{display:flex;gap:8px;margin-bottom:10px}
+.stat-card{flex:1;background:var(--card);border-radius:var(--radius);padding:12px 10px;box-shadow:var(--shadow);text-align:center}
+.stat-card .sc-label{font-size:11px;color:var(--text-2);margin-bottom:4px}
+.stat-card .sc-value{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat-card .sc-value.blue{color:var(--primary)}
+.stat-card .sc-value.green{color:var(--success)}
+.stat-card .sc-value.red{color:var(--danger)}
+.stat-card .sc-unit{font-size:11px;font-weight:400;margin-left:1px}
+.rank-list{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.rank-item{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #f5f5f5}
+.rank-item:last-child{border-bottom:none}
+.rank-num{width:24px;height:24px;border-radius:50%;background:var(--bg);color:var(--text-2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:10px}
+.rank-item:nth-child(1) .rank-num{background:#FFD700;color:#fff}
+.rank-item:nth-child(2) .rank-num{background:#C0C0C0;color:#fff}
+.rank-item:nth-child(3) .rank-num{background:#CD7F32;color:#fff}
+.rank-info{flex:1;min-width:0}
+.rank-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-sub{font-size:11px;color:var(--text-3);margin-top:1px}
+.rank-val{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:8px}
+.settle-item{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;margin-bottom:8px;border-left:4px solid var(--blue)}
+.settle-item .si-top{display:flex;justify-content:space-between;align-items:center}
+.settle-item .si-customer{font-size:15px;font-weight:600;color:var(--blue)}
+.settle-item .si-amount{font-size:17px;font-weight:700;color:var(--danger);font-variant-numeric:tabular-nums}
+.settle-item .si-detail{font-size:12px;color:var(--text-2);margin-top:6px;line-height:1.6}
+.settle-item .si-action{margin-top:8px}
+.settle-item .si-action button{padding:6px 14px;background:var(--success);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer}
+.settle-item .si-action button:active{transform:scale(.97)}
+.stat-export-row{display:flex;gap:8px;margin-top:12px}
+.stat-export-row button{flex:1;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.stat-export-row .btn-csv{background:var(--success);color:#fff}
+.stat-export-row .btn-csv:active{transform:scale(.98)}
+.stat-export-row .btn-print{background:var(--card);color:var(--primary);border:1.5px solid var(--primary)}
+.stat-export-row .btn-print:active{transform:scale(.98)}
+.backup-warn{background:var(--danger-light);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--danger);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+
+/* ===== 底部导航 ===== */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);display:flex;box-shadow:0 -1px 8px rgba(0,0,0,.06);padding-bottom:var(--safe-bottom);z-index:200}
+.bottom-nav button{flex:1;background:none;border:none;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;transition:color .2s;color:var(--text-3)}
+.bottom-nav button .nav-icon{font-size:22px;line-height:1}
+.bottom-nav button .nav-text{font-size:10px;font-weight:500}
+.bottom-nav button.active{color:var(--primary)}
+.bottom-nav button .badge-dot{position:absolute;top:6px;right:50%;transform:translateX(14px);width:8px;height:8px;background:var(--danger);border-radius:50%;border:1.5px solid var(--card)}
+.bottom-nav button{position:relative}
+
+/* ===== Toast ===== */
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;z-index:999;opacity:0;pointer-events:none;transition:opacity .25s;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* ===== 筛选条 ===== */
+.filter-bar{display:flex;gap:8px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap;cursor:pointer;transition:all .2s;background:var(--card);color:var(--text-2);box-shadow:var(--shadow);border:1.5px solid transparent}
+.filter-chip.active{background:var(--primary);color:#fff}
+
+/* 确认弹窗 */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:14px;padding:24px 20px;max-width:320px;width:100%;text-align:center;animation:modalIn .2s ease}
+@keyframes modalIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-box h3{font-size:16px;margin-bottom:8px}
+.modal-box p{font-size:14px;color:var(--text-2);margin-bottom:16px}
+.modal-btns{display:flex;gap:10px}
+.modal-btns button{flex:1;padding:10px;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer}
+.modal-btns .btn-cancel{background:#f0f0f0;color:var(--text-2)}
+.modal-btns .btn-confirm{background:var(--danger);color:#fff}
+
+.section-title{font-size:13px;color:var(--text-2);margin:4px 2px 8px;font-weight:500;display:flex;align-items:center;gap:6px}
+.section-title .count{background:var(--primary-light);color:var(--primary-dark);padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600}
+
+/* ===== 弹窗通用样式（编辑等） ===== */
+.receipt-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;display:none;align-items:flex-end;justify-content:center}
+.receipt-overlay.show{display:flex}
+.receipt-panel{background:#fff;width:100%;max-width:500px;border-radius:16px 16px 0 0;padding:20px 16px calc(20px + var(--safe-bottom));animation:slideUp .3s ease;max-height:90vh;overflow-y:auto}
+.receipt-panel .rp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.receipt-panel .rp-header h3{font-size:17px;font-weight:600}
+.receipt-panel .rp-close{background:none;border:none;font-size:24px;color:var(--text-3);cursor:pointer;padding:4px;line-height:1}
+.receipt-actions{display:flex;gap:8px;margin-top:16px}
+.receipt-actions button{flex:1;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:transform .1s}
+.receipt-actions button:active{transform:scale(.98)}
+.receipt-actions .btn-print{background:var(--primary);color:#fff}
+.receipt-actions .btn-close-r{background:#f0f0f0;color:var(--text-2)}
+
+/* ===== 批量导入 ===== */
+.btn-import-toggle{width:100%;padding:12px;background:var(--card);color:var(--primary);border:1.5px dashed var(--primary);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:12px;transition:all .2s}
+.btn-import-toggle:active{transform:scale(.98)}
+.import-section{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;display:none}
+.import-section.show{display:block;animation:fadeIn .25s ease}
+.import-section textarea{width:100%;min-height:160px;padding:12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:#fafafa;resize:vertical;font-family:inherit;line-height:1.6;transition:border-color .2s}
+.import-section textarea:focus{outline:none;border-color:var(--primary);background:#fff}
+.import-section textarea::placeholder{color:var(--text-3)}
+.import-hint{font-size:12px;color:var(--text-3);margin-top:6px;line-height:1.5}
+.import-row{display:flex;gap:10px;align-items:flex-end;margin-top:12px}
+.import-row .form-group{flex:1;margin-bottom:0}
+.btn-parse{padding:11px 20px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:transform .1s}
+.btn-parse:active{transform:scale(.97)}
+.btn-parse:disabled{opacity:.4}
+.preview-card{background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px}
+.preview-card .preview-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.preview-card .preview-fields .full{grid-column:1/-1}
+.preview-card .preview-fields label{font-size:11px;color:var(--text-3);display:block;margin-bottom:2px}
+.preview-card .preview-fields input{width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:#fff;font-family:inherit}
+.preview-card .preview-fields input:focus{outline:none;border-color:var(--primary)}
+.preview-card .preview-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.preview-card .preview-num{font-size:12px;color:var(--text-3);font-weight:600}
+.preview-card .preview-del{background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;padding:2px 6px}
+.preview-card .preview-paid{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-2)}
+.preview-card .preview-paid input{width:16px;height:16px}
+.preview-summary{background:var(--primary-light);border-radius:8px;padding:10px 14px;margin:10px 0;font-size:13px;color:var(--primary-dark);display:flex;justify-content:space-between;align-items:center}
+.btn-import-confirm{width:100%;padding:14px;background:var(--success);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:transform .1s;margin-top:8px}
+.btn-import-confirm:active{transform:scale(.98)}
+</style>
+</head>
+<body>
+
+<!-- 顶部标题栏 -->
+<div class="topbar">
+  <h1>东亚汽车玻璃 · 销售工作台</h1>
+  <div class="sub">销售记录 · 收款管理 · 数据统计</div>
+  <span class="gear" onclick="openBackup()">⚙️</span>
+</div>
+
+<!-- 汇总卡片 -->
+<div class="summary">
+  <div class="summary-card total">
+    <div class="label">当日销售</div>
+    <div class="value" id="totalAmount">0<span class="unit">元</span></div>
+  </div>
+  <div class="summary-card unpaid">
+    <div class="label">当日未付款</div>
+    <div class="value" id="unpaidAmount">0<span class="unit">元</span></div>
+  </div>
+</div>
+
+<!-- ===== Tab 1: 录入销售 ===== -->
+<div class="tab-content active" id="tab-entry">
+  <button class="btn-import-toggle" onclick="toggleImport()">📋 批量导入前期数据</button>
+  <div class="import-section" id="importSection">
+    <div class="form-group">
+      <label>统一日期</label>
+      <input type="date" class="form-input" id="importDate">
+    </div>
+    <div class="form-group">
+      <div class="switch-row">
+        <span class="switch-label"><span class="dot blue"></span>是否月结客户</span>
+        <div class="switch" id="switchImportMonthly" onclick="toggleSwitch('switchImportMonthly','importMonthly')"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>粘贴笔记内容</label>
+      <textarea id="importText" placeholder="每行一条记录，格式：客户名称:车牌 货品名称 金额 ✓&#10;例如：&#10;旅胜:湘A W379W 后挡拆装 100&#10;开慧 卓越:12速腾左后门 80 ✓"></textarea>
+      <div class="import-hint">格式说明：客户名称后加冒号":"，后面跟车牌、货品、金额。✓表示已付款。无车牌、无金额均可，自动识别。</div>
+    </div>
+    <button class="btn-parse" onclick="parseAndPreview()">解析预览</button>
+  </div>
+  <div id="importPreview"></div>
+  <div class="form-card">
+    <div class="form-group">
+      <label>日期 <span class="req">*</span></label>
+      <input type="date" class="form-input" id="entryDate">
+    </div>
+    <div class="form-group">
+      <label>客户名称 <span class="req">*</span></label>
+      <input type="text" class="form-input" id="entryCustomer" list="customerList" placeholder="输入或选择客户" autocomplete="off">
+      <datalist id="customerList"></datalist>
+    </div>
+    <div class="form-group">
+      <div class="switch-row">
+        <span class="switch-label"><span class="dot blue"></span>月结客户</span>
+        <div class="switch" id="switchMonthly" onclick="toggleSwitch('switchMonthly','monthly')"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 动态车牌+货品区域 -->
+  <div id="platesContainer"></div>
+  <button class="btn-add-plate" onclick="addPlateGroup()">+ 添加车牌</button>
+
+  <button class="btn-submit" onclick="addRecord()">确认录入</button>
+</div>
+
+<!-- ===== Tab 2: 销售记录 ===== -->
+<div class="tab-content" id="tab-records">
+  <div class="month-nav">
+    <button class="mn-btn" onclick="shiftMonth(-1)">◀</button>
+    <span class="mn-label" id="recordsMonthLabel">全部</span>
+    <button class="mn-btn" onclick="shiftMonth(1)">▶</button>
+    <span class="mn-all active" id="recordsAllBtn" onclick="setRecordsMonth(null)">全部</span>
+  </div>
+  <div class="filter-bar" id="filterBar">
+    <div class="filter-chip active" data-filter="all" onclick="setFilter('all')">全部</div>
+    <div class="filter-chip" data-filter="unpaid" onclick="setFilter('unpaid')">未付款</div>
+    <div class="filter-chip" data-filter="monthly" onclick="setFilter('monthly')">月结客户</div>
+    <div class="filter-chip" data-filter="paid" onclick="setFilter('paid')">已付款</div>
+  </div>
+  <div id="recordsList"></div>
+</div>
+
+<!-- ===== Tab 3: 搜索查询 ===== -->
+<div class="tab-content" id="tab-search">
+  <div class="search-bar">
+    <div class="search-type">
+      <button class="active" id="searchTypeCustomer" onclick="setSearchType('customer')">按客户</button>
+      <button id="searchTypePlate" onclick="setSearchType('plate')">按车牌</button>
+      <button id="searchTypeProduct" onclick="setSearchType('product')">按货品</button>
+    </div>
+  </div>
+  <div class="search-input-wrap" style="margin-bottom:12px">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="输入客户名称搜索" autocomplete="off" oninput="doSearch()">
+  </div>
+  <div id="searchResults"></div>
+</div>
+
+<!-- ===== Tab 4: 收款提醒 ===== -->
+<div class="tab-content" id="tab-remind">
+  <div id="reminderBanner"></div>
+  <div id="reminderList"></div>
+</div>
+
+<!-- ===== Tab 5: 统计面板 ===== -->
+<div class="tab-content" id="tab-stats">
+  <div class="month-nav">
+    <button class="mn-btn" onclick="shiftStatMonth(-1)">◀</button>
+    <span class="mn-label" id="statMonthLabel">2026年8月</span>
+    <button class="mn-btn" onclick="shiftStatMonth(1)">▶</button>
+  </div>
+  <div id="statsContent"></div>
+</div>
+
+<!-- 底部导航 -->
+<div class="bottom-nav">
+  <button class="active" data-tab="entry" onclick="switchTab('entry')">
+    <span class="nav-icon">📝</span>
+    <span class="nav-text">录入</span>
+  </button>
+  <button data-tab="records" onclick="switchTab('records')">
+    <span class="nav-icon">📋</span>
+    <span class="nav-text">记录</span>
+  </button>
+  <button data-tab="search" onclick="switchTab('search')">
+    <span class="nav-icon">🔍</span>
+    <span class="nav-text">搜索</span>
+  </button>
+  <button data-tab="remind" onclick="switchTab('remind')">
+    <span class="nav-icon">🔔</span>
+    <span class="nav-text">提醒</span>
+    <span class="badge-dot" id="remindDot" style="display:none"></span>
+  </button>
+  <button data-tab="stats" onclick="switchTab('stats')">
+    <span class="nav-icon">📊</span>
+    <span class="nav-text">统计</span>
+  </button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 确认弹窗 -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <h3 id="modalTitle">确认删除</h3>
+    <p id="modalText">确定要删除这条记录吗？</p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-confirm" id="modalConfirmBtn">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑记录弹窗 -->
+<div class="receipt-overlay" id="editOverlay">
+  <div class="receipt-panel">
+    <div class="rp-header">
+      <h3>✏️ 编辑销售记录</h3>
+      <button class="rp-close" onclick="closeEditRecord()">✕</button>
+    </div>
+    <div id="editFormContent"></div>
+    <div class="receipt-actions">
+      <button class="btn-print" onclick="saveEditRecord()">💾 保存修改</button>
+      <button class="btn-close-r" onclick="closeEditRecord()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 数据备份面板 -->
+<div class="backup-overlay" id="backupOverlay">
+  <div class="backup-panel">
+    <div class="bp-header">
+      <h3>💾 数据备份与恢复</h3>
+      <button class="bp-close" onclick="closeBackup()">✕</button>
+    </div>
+    <div class="backup-stats">
+      <div class="stat-item">
+        <div class="stat-val" id="bkRecordCount">0</div>
+        <div class="stat-lbl">总记录数</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="bkTotalAmount">0</div>
+        <div class="stat-lbl">总金额(元)</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="bkUnpaidCount">0</div>
+        <div class="stat-lbl">未付款笔数</div>
+      </div>
+    </div>
+
+    <div class="backup-section-title">导出备份</div>
+    <button class="backup-btn export" onclick="exportFile()">
+      <span class="b-icon">📥</span> 下载备份文件
+    </button>
+    <button class="backup-btn copy" onclick="exportClipboard()">
+      <span class="b-icon">📋</span> 复制数据到剪贴板
+    </button>
+    <div class="backup-tip">备份文件为JSON格式，保存在手机下载文件夹中。建议每周备份一次，防止清理缓存丢失数据。</div>
+
+    <div class="backup-divider"></div>
+
+    <div class="backup-section-title">导入恢复</div>
+    <button class="backup-btn import" onclick="triggerImportFile()">
+      <span class="b-icon">📤</span> 从备份文件恢复
+    </button>
+    <button class="backup-btn copy" onclick="togglePasteImport()">
+      <span class="b-icon">📝</span> 粘贴备份数据恢复
+    </button>
+    <input type="file" class="backup-file-input" id="importFileInput" accept=".json,.txt" onchange="importFile(event)">
+    <div class="import-area" id="pasteImportArea">
+      <textarea id="pasteImportText" placeholder="将之前复制的备份数据粘贴到这里..."></textarea>
+      <button class="backup-btn import" style="margin-top:8px" onclick="importFromText()">确认恢复</button>
+    </div>
+    <div class="backup-tip">导入会覆盖当前所有数据，请确认备份文件正确后再操作。</div>
+
+    <div class="backup-divider"></div>
+
+    <div class="backup-section-title" style="color:var(--danger)">危险操作</div>
+    <button class="backup-btn clear" onclick="confirmClearAll()">
+      <span class="b-icon">🗑️</span> 清空所有数据
+    </button>
+    <div class="backup-tip" style="color:var(--danger)">清空后不可恢复，请务必先导出备份！</div>
+
+    <div class="backup-divider"></div>
+
+    <div class="backup-section-title">🔄 更新与刷新</div>
+    <button class="backup-btn" onclick="forceRefresh()" style="border-color:var(--primary);color:var(--primary)">
+      <span class="b-icon">🔄</span> 强制刷新到最新版本
+    </button>
+    <div class="backup-tip">如果功能异常或看不到新功能，点此刷新。当前版本：<span id="appVersion" style="color:var(--primary);font-weight:600">v7.0</span></div>
+
+    <div class="backup-divider"></div>
+
+    <div class="backup-section-title">📌 永久使用指南</div>
+    <div class="backup-tip" style="line-height:1.8;font-size:13px;color:var(--text-2)">
+      <b>1. 添加到主屏幕</b><br>手机浏览器打开后→分享→添加到主屏幕，像App一样永久使用<br><br>
+      <b>2. 定期备份</b><br>每7天系统会提醒备份，每30天自动下载备份文件，请保存到微信/云盘<br><br>
+      <b>3. 换手机迁移</b><br>旧手机：下载备份文件→发到微信文件传输助手<br>新手机：打开工作台→⚙️→从备份文件恢复<br><br>
+      <b>4. 离线使用</b><br>安装后无需网络也能用，数据存在手机本地<br><br>
+      <b>5. 数据容量</b><br>当前数据：<span id="dataSizeInfo" style="color:var(--primary);font-weight:600">计算中...</span><br>
+      <span style="font-size:11px;color:var(--text-3)">（localStorage通常可用5-10MB，约5万条记录）</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========== 数据层 ========== */
+var STORAGE_KEY = 'dongya_glass_sales';
+var records = [];
+var currentFilter = 'all';
+var searchType = 'customer';
+var formState = { monthly: false, importMonthly: false };
+var importPreviewData = [];
+var recordsMonthFilter = null; // null=全部, 'YYYY-MM'=按月
+var statMonth = null; // 统计面板当前月份
+
+function loadData(){
+  try{
+    var data = localStorage.getItem(STORAGE_KEY);
+    records = data ? JSON.parse(data) : [];
+    // 迁移旧数据（扁平结构 → 新嵌套结构）
+    records.forEach(function(r){
+      if(!r.plates){
+        r.plates = [{
+          plate: r.plate || '',
+          items: [{
+            id: r.id,
+            product: r.product || '',
+            brand: r.brand || '',
+            amount: r.amount || 0,
+            isPaid: !!r.isPaid
+          }]
+        }];
+      }
+    });
+  }catch(e){ records = []; }
+}
+
+function saveData(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+function genId(){
+  return Date.now().toString(36) + Math.random().toString(36).substr(2,5);
+}
+
+/* ===== 辅助函数：嵌套结构展开 ===== */
+function flattenItems(record){
+  var result = [];
+  if(!record.plates) return result;
+  record.plates.forEach(function(pg, pi){
+    pg.items.forEach(function(item){
+      result.push({
+        recordId: record.id,
+        itemId: item.id,
+        date: record.date,
+        customer: record.customer,
+        plate: pg.plate || '',
+        product: item.product,
+        saleType: item.saleType || '',
+        brand: item.brand || '',
+        quantity: item.quantity || 1,
+        amount: item.amount,
+        isPaid: item.isPaid,
+        isMonthly: record.isMonthly,
+        createdAt: record.createdAt
+      });
+    });
+  });
+  return result;
+}
+
+function getAllItems(){
+  var all = [];
+  records.forEach(function(r){
+    all = all.concat(flattenItems(r));
+  });
+  return all;
+}
+
+function recordTotal(record){
+  var total = 0;
+  if(record.plates){
+    record.plates.forEach(function(pg){
+      pg.items.forEach(function(item){ total += (item.amount === null || item.amount === undefined) ? 0 : (parseFloat(item.amount)||0); });
+    });
+  }
+  return total;
+}
+
+function recordItemCount(record){
+  var n = 0;
+  if(record.plates){
+    record.plates.forEach(function(pg){ n += pg.items.length; });
+  }
+  return n;
+}
+
+function findRecord(recordId){
+  for(var i=0;i<records.length;i++){
+    if(records[i].id === recordId) return records[i];
+  }
+  return null;
+}
+
+function findRecordByDateCustomer(date, customer){
+  for(var i=0;i<records.length;i++){
+    if(records[i].date === date && records[i].customer === customer) return records[i];
+  }
+  return null;
+}
+
+/* 将 plates 合并到已有 record 中，相同车牌号自动合并 */
+function mergePlatesIntoRecord(targetRecord, newPlates){
+  newPlates.forEach(function(np){
+    var existingPG = null;
+    for(var i=0;i<targetRecord.plates.length;i++){
+      if(targetRecord.plates[i].plate === np.plate){
+        existingPG = targetRecord.plates[i];
+        break;
+      }
+    }
+    if(existingPG){
+      existingPG.items = existingPG.items.concat(np.items);
+    } else {
+      targetRecord.plates.push(np);
+    }
+  });
+}
+
+function findItem(recordId, itemId){
+  var r = findRecord(recordId);
+  if(!r || !r.plates) return null;
+  for(var i=0;i<r.plates.length;i++){
+    for(var j=0;j<r.plates[i].items.length;j++){
+      if(r.plates[i].items[j].id === itemId) return { record: r, plateGroup: r.plates[i], item: r.plates[i].items[j] };
+    }
+  }
+  return null;
+}
+
+function formatDate(d){
+  var y = d.getFullYear();
+  var m = ('0'+(d.getMonth()+1)).slice(-2);
+  var day = ('0'+d.getDate()).slice(-2);
+  return y+'-'+m+'-'+day;
+}
+
+function todayStr(){
+  return formatDate(new Date());
+}
+
+/* ========== 开关控件 ========== */
+function toggleSwitch(id, type){
+  var el = document.getElementById(id);
+  var isOn = el.classList.contains('on');
+  if(isOn){
+    el.classList.remove('on');
+    if(type==='paid') el.classList.add('off-danger');
+    formState[type] = false;
+  } else {
+    el.classList.add('on');
+    if(type==='paid') el.classList.remove('off-danger');
+    formState[type] = true;
+  }
+  // 更新付款标签颜色
+  if(type==='paid'){
+    var label = document.getElementById('paidLabel');
+    var dot = label.querySelector('.dot');
+    if(formState.paid){
+      dot.style.background = 'var(--success)';
+      label.lastChild.textContent = ' 已付款';
+    } else {
+      dot.style.background = 'var(--red)';
+      label.lastChild.textContent = ' 是否付款';
+    }
+  }
+}
+
+/* ========== 动态表单：车牌+货品管理 ========== */
+var plateGroupCounter = 0;
+
+function addPlateGroup(plateStr){
+  var container = document.getElementById('platesContainer');
+  var gid = 'pg_' + (++plateGroupCounter);
+  var div = document.createElement('div');
+  div.className = 'plate-group';
+  div.id = gid;
+  div.innerHTML =
+    '<div class="pg-header">' +
+      '<input type="text" class="form-input pg-plate" list="plateList" placeholder="车牌号码（留空=无车牌）" autocomplete="off" style="text-transform:uppercase" value="' + esc(plateStr||'') + '">' +
+      '<datalist id="plateList"></datalist>' +
+      '<button class="pg-del" onclick="removePlateGroup(\'' + gid + '\')">✕</button>' +
+    '</div>' +
+    '<div class="pg-items"></div>' +
+    '<button class="btn-add-item" onclick="addItemRow(\'' + gid + '\')">+ 添加货品</button>';
+  container.appendChild(div);
+  if(!plateStr && container.children.length === 1){
+    // 首次自动添加一个货品行
+    addItemRow(gid);
+  } else {
+    addItemRow(gid);
+  }
+  return gid;
+}
+
+function addItemRow(gid){
+  var itemsContainer = document.querySelector('#' + gid + ' .pg-items');
+  var row = document.createElement('div');
+  row.className = 'item-row';
+  row.innerHTML =
+    '<div class="ir-product"><label>货品名称</label><input type="text" class="form-input ir-pname" list="productList" placeholder="货品" autocomplete="off"></div>' +
+    '<datalist id="productList"></datalist>' +
+    '<div class="ir-type"><label>售出方式</label><select class="form-input ir-stype"><option value="安装">安装</option><option value="拿货">拿货</option><option value="包木架">包木架</option></select></div>' +
+    '<div class="ir-brand"><label>品牌型号</label><input type="text" class="form-input ir-pbrand" list="brandList" placeholder="选填"></div>' +
+    '<datalist id="brandList"></datalist>' +
+    '<div class="ir-qty"><label>数量</label><input type="number" class="form-input ir-pqty" placeholder="1" step="1" min="0" inputmode="numeric" value="1"></div>' +
+    '<div class="ir-amount"><label>金额</label><input type="number" class="form-input ir-pamt" placeholder="选填" step="0.01" inputmode="decimal"></div>' +
+    '<div class="ir-paid"><input type="checkbox" class="ir-ppaid"><label>已付</label></div>' +
+    '<button class="ir-del" onclick="this.parentElement.remove();updateSummary()">✕</button>';
+  itemsContainer.appendChild(row);
+  updateSummary();
+}
+
+function removePlateGroup(gid){
+  var el = document.getElementById(gid);
+  if(el) el.remove();
+  // 如果没有车牌组了，自动添加一个
+  if(document.getElementById('platesContainer').children.length === 0){
+    addPlateGroup();
+  }
+  updateSummary();
+}
+
+function initEntryForm(){
+  plateGroupCounter = 0;
+  document.getElementById('platesContainer').innerHTML = '';
+  addPlateGroup();
+  updateSummary();
+}
+
+/* 实时汇总：表单输入变化时刷新当日合计 */
+function bindLiveSummary(){
+  var platesContainer = document.getElementById('platesContainer');
+  if(platesContainer){
+    platesContainer.addEventListener('input', function(e){
+      if(e.target.classList.contains('ir-pamt')) updateSummary();
+    });
+    platesContainer.addEventListener('change', function(e){
+      if(e.target.classList.contains('ir-ppaid')) updateSummary();
+    });
+  }
+  var dateInput = document.getElementById('entryDate');
+  if(dateInput){
+    dateInput.addEventListener('change', updateSummary);
+  }
+}
+
+/* ========== 录入销售 ========== */
+function addRecord(){
+  var date = document.getElementById('entryDate').value;
+  var customer = document.getElementById('entryCustomer').value.trim();
+
+  if(!date){ showToast('请选择日期'); return; }
+  if(!customer){ showToast('请输入客户名称'); return; }
+
+  // 收集车牌+货品数据
+  var plates = [];
+  var plateGroups = document.querySelectorAll('#platesContainer .plate-group');
+  var hasValidItem = false;
+
+  plateGroups.forEach(function(pg){
+    var plateStr = pg.querySelector('.pg-plate').value.trim();
+    var items = [];
+    pg.querySelectorAll('.item-row').forEach(function(row){
+      var product = row.querySelector('.ir-pname').value.trim();
+      var stype = row.querySelector('.ir-stype').value;
+      var brand = row.querySelector('.ir-pbrand').value.trim();
+      var qty = parseInt(row.querySelector('.ir-pqty').value) || 1;
+      var amountStr = row.querySelector('.ir-pamt').value.trim();
+      var amount = amountStr === '' ? null : parseFloat(amountStr);
+      var isPaid = row.querySelector('.ir-ppaid').checked;
+      if(product){
+        items.push({
+          id: genId(),
+          product: product,
+          saleType: stype,
+          brand: brand,
+          quantity: qty,
+          amount: amount,
+          isPaid: isPaid
+        });
+        hasValidItem = true;
+      }
+    });
+    if(items.length > 0){
+      plates.push({ plate: plateStr, items: items });
+    }
+  });
+
+  if(!hasValidItem){ showToast('请至少录入一条货品（含名称）'); return; }
+
+  // 检查同一天同一客户是否已有记录，有则自动合并
+  var existing = findRecordByDateCustomer(date, customer);
+  if(existing){
+    // 月结属性：任一为月结则为月结
+    if(formState.monthly) existing.isMonthly = true;
+    mergePlatesIntoRecord(existing, plates);
+    saveData();
+    var mergedCount = recordItemCount(existing);
+    // 清空表单（保留日期和月结设置）
+    document.getElementById('entryCustomer').value = '';
+    initEntryForm();
+    showToast('已合并到 ' + customer + ' 当日记录 ✓ 共 ' + mergedCount + ' 件货品');
+    updateAll();
+    return;
+  }
+
+  var record = {
+    id: genId(),
+    date: date,
+    customer: customer,
+    isMonthly: formState.monthly,
+    createdAt: Date.now(),
+    plates: plates
+  };
+  records.push(record);
+  saveData();
+
+  // 清空表单（保留日期和月结设置）
+  document.getElementById('entryCustomer').value = '';
+  initEntryForm();
+
+  showToast('录入成功 ✓ 共 ' + recordItemCount(record) + ' 件货品');
+  updateAll();
+}
+
+/* ========== 批量导入功能 ========== */
+function toggleImport(){
+  var sec = document.getElementById('importSection');
+  sec.classList.toggle('show');
+  if(sec.classList.contains('show')){
+    document.getElementById('importDate').value = todayStr();
+  }
+}
+
+function parsePlate(text){
+  var provinces = '京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼';
+  var re = new RegExp('[' + provinces + '][A-Z]\\s*[A-Z0-9]{4,6}');
+  var m = text.match(re);
+  if(m){
+    var plate = m[0].replace(/\s+/g,'');
+    var cleaned = text.replace(m[0], ' ').replace(/\s+/g,' ').trim();
+    return { plate: plate, rest: cleaned };
+  }
+  return { plate: '', rest: text };
+}
+
+function parseNotes(text){
+  var brands = ['福耀','信义','南玻','耀华','耀皮','台玻','旭硝子','圣戈班','皮尔金顿','加迪安'];
+  var lines = text.split('\n');
+  var results = [];
+  var lineNum = 0;
+
+  lines.forEach(function(line){
+    line = line.trim();
+    if(!line) return;
+    lineNum++;
+
+    var customer = '';
+    var rest = '';
+
+    // Split by colon (English or Chinese)
+    var colonIdx = line.indexOf(':');
+    if(colonIdx === -1) colonIdx = line.indexOf('：');
+    if(colonIdx !== -1){
+      customer = line.substring(0, colonIdx).trim();
+      rest = line.substring(colonIdx + 1).trim();
+    } else {
+      rest = line;
+    }
+
+    // Check for ✓ or √ (paid)
+    var isPaid = false;
+    if(/[✓√]/.test(rest)){
+      isPaid = true;
+      rest = rest.replace(/[✓√]/g, '').trim();
+    }
+
+    // Extract plate
+    var parsed = parsePlate(rest);
+    var plate = parsed.plate;
+    rest = parsed.rest;
+
+    // Extract amount: try ×N first, then plain number at end
+    var amount = null;
+    var xMatch = rest.match(/[×x](\d+(?:\.\d+)?)\s*$/);
+    if(xMatch){
+      amount = parseFloat(xMatch[1]);
+      rest = rest.replace(/[×x]\d+(?:\.\d+)?\s*$/, '').trim();
+    } else {
+      var numMatch = rest.match(/(\d+(?:\.\d+)?)\s*$/);
+      if(numMatch){
+        amount = parseFloat(numMatch[1]);
+        rest = rest.replace(/\d+(?:\.\d+)?\s*$/, '').trim();
+      }
+    }
+
+    // Try to extract brand
+    var brand = '';
+    brands.forEach(function(b){
+      var idx = rest.indexOf(b);
+      if(idx !== -1){
+        brand = b;
+        rest = rest.substring(0, idx).trim() + ' ' + rest.substring(idx + b.length).trim();
+        rest = rest.replace(/\s+/g, ' ').trim();
+      }
+    });
+
+    // Everything else is product
+    var product = rest.trim();
+
+    results.push({
+      lineNum: lineNum,
+      customer: customer,
+      plate: plate,
+      product: product,
+      brand: brand,
+      amount: amount,
+      isPaid: isPaid,
+      valid: customer && product
+    });
+  });
+
+  return results;
+}
+
+function parseAndPreview(){
+  var text = document.getElementById('importText').value;
+  if(!text.trim()){
+    showToast('请先粘贴笔记内容');
+    return;
+  }
+
+  var date = document.getElementById('importDate').value || todayStr();
+  var isMonthly = formState.importMonthly;
+  importPreviewData = parseNotes(text);
+
+  if(importPreviewData.length === 0){
+    showToast('未解析到有效记录');
+    return;
+  }
+
+  renderImportPreview(date, isMonthly);
+}
+
+function renderImportPreview(date, isMonthly){
+  var container = document.getElementById('importPreview');
+  var validCount = importPreviewData.filter(function(r){ return r.valid; }).length;
+  var totalAmount = 0;
+  importPreviewData.forEach(function(r){ if(r.valid && r.amount !== null && !isNaN(r.amount)) totalAmount += r.amount; });
+
+  var html = '<div class="import-section show">' +
+    '<div class="preview-summary">' +
+      '<span>共 ' + importPreviewData.length + ' 条，有效 ' + validCount + ' 条</span>' +
+      '<span style="font-weight:700">合计 ' + formatMoney(totalAmount) + ' 元</span>' +
+    '</div>';
+
+  importPreviewData.forEach(function(r, i){
+    var warnStyle = r.valid ? '' : 'border-left:3px solid var(--warning);';
+    html += '<div class="preview-card" style="' + warnStyle + '">' +
+      '<div class="preview-top">' +
+        '<span class="preview-num">#' + (i+1) + (r.valid ? '' : ' ⚠️待补全') + '</span>' +
+        '<button class="preview-del" onclick="removePreviewItem(' + i + ')">删除</button>' +
+      '</div>' +
+      '<div class="preview-fields">' +
+        '<div class="full"><label>客户名称</label><input type="text" value="' + esc(r.customer) + '" oninput="updatePreviewField(' + i + ',\'customer\',this.value)" placeholder="客户名称"></div>' +
+        '<div><label>车牌号码</label><input type="text" value="' + esc(r.plate) + '" oninput="updatePreviewField(' + i + ',\'plate\',this.value)" placeholder="车牌"></div>' +
+        '<div><label>金额（元）</label><input type="number" value="' + (r.amount===null||r.amount===undefined?'':r.amount) + '" oninput="updatePreviewField(' + i + ',\'amount\',this.value)" placeholder="选填" inputmode="decimal"></div>' +
+        '<div class="full"><label>货品名称</label><input type="text" value="' + esc(r.product) + '" oninput="updatePreviewField(' + i + ',\'product\',this.value)" placeholder="货品名称"></div>' +
+        '<div class="full"><label>品牌型号（选填）</label><input type="text" value="' + esc(r.brand||'') + '" oninput="updatePreviewField(' + i + ',\'brand\',this.value)" placeholder="如：福耀、信义"></div>' +
+        '<div class="full preview-paid"><input type="checkbox" id="previewPaid' + i + '" ' + (r.isPaid?'checked':'') + ' onchange="updatePreviewField(' + i + ',\'isPaid\',this.checked)"><label for="previewPaid' + i + '" style="margin:0">已付款</label></div>' +
+      '</div>' +
+    '</div>';
+  });
+
+  html += '<button class="btn-import-confirm" onclick="confirmImport(\'' + date + '\', ' + isMonthly + ')">确认导入 ' + validCount + ' 条记录</button>' +
+    '</div>';
+
+  container.innerHTML = html;
+}
+
+function updatePreviewField(idx, field, value){
+  if(field === 'amount') value = value === '' ? null : (parseFloat(value) || 0);
+  importPreviewData[idx][field] = value;
+  importPreviewData[idx].valid = importPreviewData[idx].customer && importPreviewData[idx].product;
+  // Update summary without full re-render
+  var validCount = importPreviewData.filter(function(r){ return r.valid; }).length;
+  var totalAmount = 0;
+  importPreviewData.forEach(function(r){ if(r.valid && r.amount !== null && !isNaN(r.amount)) totalAmount += r.amount; });
+  var summary = document.querySelector('.preview-summary');
+  if(summary){
+    summary.innerHTML = '<span>共 ' + importPreviewData.length + ' 条，有效 ' + validCount + ' 条</span><span style="font-weight:700">合计 ' + formatMoney(totalAmount) + ' 元</span>';
+  }
+  var btn = document.querySelector('.btn-import-confirm');
+  if(btn) btn.textContent = '确认导入 ' + validCount + ' 条记录';
+}
+
+function removePreviewItem(idx){
+  importPreviewData.splice(idx, 1);
+  if(importPreviewData.length === 0){
+    document.getElementById('importPreview').innerHTML = '';
+    return;
+  }
+  var date = document.getElementById('importDate').value || todayStr();
+  var isMonthly = formState.importMonthly;
+  renderImportPreview(date, isMonthly);
+}
+
+function confirmImport(date, isMonthly){
+  var validRecords = importPreviewData.filter(function(r){ return r.valid; });
+  if(validRecords.length === 0){
+    showToast('没有可导入的有效记录');
+    return;
+  }
+
+  // 按客户名称分组，同客户的记录合并为一条多车牌单
+  var customerGroups = {};
+  var customerOrder = [];
+  validRecords.forEach(function(r){
+    if(!customerGroups[r.customer]){
+      customerGroups[r.customer] = [];
+      customerOrder.push(r.customer);
+    }
+    customerGroups[r.customer].push(r);
+  });
+
+  var imported = 0;
+  customerOrder.forEach(function(cust){
+    var items = customerGroups[cust];
+    // 按 plate 分组
+    var plateGroups = {};
+    var plateOrder = [];
+    items.forEach(function(r){
+      var plateKey = r.plate || '';
+      if(!plateGroups[plateKey]){
+        plateGroups[plateKey] = [];
+        plateOrder.push(plateKey);
+      }
+      plateGroups[plateKey].push(r);
+    });
+
+    var plates = [];
+    plateOrder.forEach(function(pk){
+      var plateItems = plateGroups[pk].map(function(r){
+        return {
+          id: genId(),
+          product: r.product,
+          saleType: '安装',
+          brand: r.brand || '',
+          quantity: 1,
+          amount: r.amount,
+          isPaid: r.isPaid
+        };
+      });
+      plates.push({ plate: pk, items: plateItems });
+    });
+
+    // 检查同一天同一客户是否已有记录，有则自动合并
+    var existing = findRecordByDateCustomer(date, cust);
+    if(existing){
+      if(isMonthly) existing.isMonthly = true;
+      mergePlatesIntoRecord(existing, plates);
+    } else {
+      records.push({
+        id: genId(),
+        date: date,
+        customer: cust,
+        isMonthly: isMonthly,
+        createdAt: Date.now() + imported,
+        plates: plates
+      });
+    }
+    imported += items.length;
+  });
+
+  saveData();
+  showToast('成功导入 ' + imported + ' 件货品 ✓');
+
+  // Clear import UI
+  document.getElementById('importText').value = '';
+  document.getElementById('importPreview').innerHTML = '';
+  document.getElementById('importSection').classList.remove('show');
+  importPreviewData = [];
+
+  updateAll();
+  switchTab('records');
+}
+
+/* ========== 记录列表渲染 ========== */
+function setFilter(f){
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(function(c){
+    c.classList.toggle('active', c.dataset.filter === f);
+  });
+  renderRecords();
+}
+
+/* ========== 月份导航（记录页） ========== */
+function setRecordsMonth(month){
+  recordsMonthFilter = month;
+  var label = document.getElementById('recordsMonthLabel');
+  var allBtn = document.getElementById('recordsAllBtn');
+  if(month){
+    var parts = month.split('-');
+    label.textContent = parseInt(parts[1]) + '月 ' + parts[0];
+    allBtn.classList.remove('active');
+  } else {
+    label.textContent = '全部';
+    allBtn.classList.add('active');
+  }
+  renderRecords();
+}
+
+function shiftMonth(delta){
+  if(!recordsMonthFilter){
+    // 从全部切换到当前月
+    var d = new Date();
+    recordsMonthFilter = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2);
+    if(delta < 0) shiftMonthBy(recordsMonthFilter, delta);
+    setRecordsMonth(recordsMonthFilter);
+    return;
+  }
+  var newMonth = shiftMonthBy(recordsMonthFilter, delta);
+  setRecordsMonth(newMonth);
+}
+
+function shiftMonthBy(monthStr, delta){
+  var parts = monthStr.split('-');
+  var y = parseInt(parts[0]);
+  var m = parseInt(parts[1]) + delta;
+  while(m < 1){ m += 12; y--; }
+  while(m > 12){ m -= 12; y++; }
+  return y + '-' + ('0'+m).slice(-2);
+}
+
+function getFilteredRecords(){
+  var list = records.slice();
+  // 月份筛选
+  if(recordsMonthFilter){
+    list = list.filter(function(r){ return r.date && r.date.substring(0,7) === recordsMonthFilter; });
+  }
+  // 按付款状态筛选记录
+  if(currentFilter === 'unpaid'){
+    list = list.filter(function(r){
+      return r.plates && r.plates.some(function(pg){ return pg.items.some(function(it){ return !it.isPaid; }); });
+    });
+  } else if(currentFilter === 'monthly'){
+    list = list.filter(function(r){ return r.isMonthly; });
+  } else if(currentFilter === 'paid'){
+    list = list.filter(function(r){
+      return r.plates && r.plates.every(function(pg){ return pg.items.every(function(it){ return it.isPaid; }); });
+    });
+  }
+  // 按日期降序，同日期按创建时间降序
+  list.sort(function(a,b){
+    if(a.date !== b.date) return b.date.localeCompare(a.date);
+    return b.createdAt - a.createdAt;
+  });
+  return list;
+}
+
+function renderRecords(){
+  var list = getFilteredRecords();
+  var container = document.getElementById('recordsList');
+
+  if(list.length === 0){
+    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div class="text">暂无销售记录</div></div>';
+    return;
+  }
+
+  /* 按日期分组 */
+  var groups = {};
+  var dateOrder = [];
+  list.forEach(function(r){
+    var d = r.date || '未知日期';
+    if(!groups[d]){ groups[d] = []; dateOrder.push(d); }
+    groups[d].push(r);
+  });
+
+  var html = '';
+  dateOrder.forEach(function(d){
+    var dayList = groups[d];
+    var dayTotal = 0;
+    var dayItems = 0;
+    dayList.forEach(function(r){ dayTotal += recordTotal(r); dayItems += recordItemCount(r); });
+
+    /* 日期头 */
+    html += '<div class="day-group">';
+    html += '<div class="day-header"><span>📅 ' + d + '（' + dayList.length + '单/' + dayItems + '件）</span><span class="day-total">合计 ' + formatMoney(dayTotal) + ' 元</span></div>';
+    html += '<div class="day-table-wrap"><table class="day-table">';
+    html += '<thead><tr>' +
+      '<th>客户</th>' +
+      '<th>车牌</th>' +
+      '<th>货品</th>' +
+      '<th class="center">售出</th>' +
+      '<th class="right">数量</th>' +
+      '<th class="right">金额</th>' +
+      '<th class="center">状态</th>' +
+      '<th class="center">操作</th>' +
+    '</tr></thead><tbody>';
+
+    dayList.forEach(function(r){
+      var itemRows = [];
+      r.plates.forEach(function(pg){
+        pg.items.forEach(function(item){
+          itemRows.push({ plate: pg.plate, item: item });
+        });
+      });
+
+      itemRows.forEach(function(row, idx){
+        var item = row.item;
+        var rowClass = '';
+        var dotClass = 'green';
+        var statusText = '已付';
+        if(r.isMonthly){
+          rowClass = 'row-monthly';
+          dotClass = 'blue';
+          statusText = item.isPaid ? '月结·已付' : '月结';
+        } else if(!item.isPaid){
+          rowClass = 'row-unpaid';
+          dotClass = 'red';
+          statusText = '未付';
+        }
+
+        var paidBtnText = item.isPaid ? '撤付' : '付款';
+        var customerCell = idx === 0 ? esc(r.customer) : '';
+        var showActions = idx === itemRows.length - 1; // 最后一行显示整单操作
+        var pendingClass = (item.amount === null || item.amount === undefined) ? ' row-pending' : '';
+
+        html += '<tr class="' + rowClass + pendingClass + '">' +
+          '<td>' + (customerCell || '') + (idx === 0 && r.isMonthly ? '<span class="day-dot blue" style="margin-left:2px"></span>' : '') + '</td>' +
+          '<td>' + (row.plate ? esc(row.plate) : '<span style="color:#ccc">—</span>') + '</td>' +
+          '<td>' + esc(item.product) + (item.brand ? '<span class="sub">' + esc(item.brand) + '</span>' : '') + '</td>' +
+          '<td class="center" style="white-space:nowrap">' + esc(item.saleType||'') + '</td>' +
+          '<td class="right">' + (item.quantity||1) + '</td>' +
+          '<td class="right"><span class="amt">' + (item.amount === null || item.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(item.amount)) + '</span></td>' +
+          '<td class="center"><span class="day-dot ' + dotClass + '"></span>' + statusText + '</td>' +
+          '<td class="center"><div class="act-btns">' +
+            '<button class="' + (item.isPaid?'':'success') + '" onclick="toggleItemPaid(\'' + r.id + '\',\'' + item.id + '\')">' + paidBtnText + '</button>' +
+            (showActions ? '<button class="edit" onclick="openEditRecord(\'' + r.id + '\')">编辑</button><button class="danger" onclick="deleteRecord(\'' + r.id + '\')">删单</button>' : '') +
+          '</div></td>' +
+        '</tr>';
+      });
+    });
+
+    html += '</tbody></table></div></div>';
+  });
+  container.innerHTML = html;
+}
+
+/* ========== 付款/删除操作 ========== */
+function toggleItemPaid(recordId, itemId){
+  var found = findItem(recordId, itemId);
+  if(!found) return;
+  found.item.isPaid = !found.item.isPaid;
+  saveData();
+  showToast(found.item.isPaid ? '已标记付款 ✓' : '已撤销付款');
+  updateAll();
+}
+
+function deleteRecord(recordId){
+  var r = findRecord(recordId);
+  if(!r) return;
+  var itemDesc = recordItemCount(r) + '件货品';
+  showModal('确认删除整单', '客户：' + r.customer + '\n日期：' + r.date + '\n共 ' + itemDesc + '，合计 ' + formatMoney(recordTotal(r)) + '元\n\n删除后不可恢复，确认删除？', function(){
+    records = records.filter(function(x){ return x.id !== recordId; });
+    saveData();
+    showToast('已删除');
+    updateAll();
+  });
+}
+
+/* ========== 编辑记录 ========== */
+var editingRecordId = null;
+var editPlateGroupCounter = 0;
+
+function openEditRecord(recordId){
+  var r = findRecord(recordId);
+  if(!r) return;
+  editingRecordId = recordId;
+  editPlateGroupCounter = 0;
+
+  var monthlyChecked = r.isMonthly ? ' checked' : '';
+  var html = '' +
+    '<div class="form-card">' +
+      '<div class="form-group">' +
+        '<label>日期 <span class="req">*</span></label>' +
+        '<input type="date" class="form-input" id="editDate" value="' + esc(r.date) + '">' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label>客户名称 <span class="req">*</span></label>' +
+        '<input type="text" class="form-input" id="editCustomer" list="customerList" value="' + esc(r.customer) + '" autocomplete="off">' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<div class="switch-row">' +
+          '<span class="switch-label"><span class="dot blue"></span>月结客户</span>' +
+          '<div class="switch' + (r.isMonthly ? ' on' : '') + '" id="editSwitchMonthly" onclick="toggleEditSwitch()"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:13px;font-weight:600;color:var(--text-2);margin:4px 0 6px">车牌与货品</div>' +
+      '<div id="editPlatesContainer"></div>' +
+      '<button class="btn-add-plate" onclick="addEditPlateGroup(\'\')">+ 添加车牌</button>' +
+    '</div>';
+
+  document.getElementById('editFormContent').innerHTML = html;
+
+  // 填充已有车牌+货品
+  r.plates.forEach(function(pg){
+    var gid = addEditPlateGroup(pg.plate);
+    pg.items.forEach(function(item){
+      addEditItemRow(gid, item);
+    });
+  });
+
+  document.getElementById('editOverlay').classList.add('show');
+}
+
+function toggleEditSwitch(){
+  var sw = document.getElementById('editSwitchMonthly');
+  sw.classList.toggle('on');
+}
+
+function addEditPlateGroup(plateStr){
+  var container = document.getElementById('editPlatesContainer');
+  var gid = 'epg_' + (++editPlateGroupCounter);
+  var div = document.createElement('div');
+  div.className = 'plate-group';
+  div.id = gid;
+  div.innerHTML =
+    '<div class="pg-header">' +
+      '<input type="text" class="form-input pg-plate" list="plateList" placeholder="车牌号码（留空=无车牌）" autocomplete="off" style="text-transform:uppercase" value="' + esc(plateStr||'') + '">' +
+      '<button class="pg-del" onclick="document.getElementById(\'' + gid + '\').remove()">✕</button>' +
+    '</div>' +
+    '<div class="pg-items"></div>' +
+    '<button class="btn-add-item" onclick="addEditItemRow(\'' + gid + '\',null)">+ 添加货品</button>';
+  container.appendChild(div);
+  if(!plateStr && container.children.length === 1){
+    addEditItemRow(gid, null);
+  }
+  return gid;
+}
+
+function addEditItemRow(gid, item){
+  var itemsContainer = document.querySelector('#' + gid + ' .pg-items');
+  var row = document.createElement('div');
+  row.className = 'item-row';
+  var p = item ? item.product : '';
+  var st = item ? (item.saleType||'安装') : '安装';
+  var b = item ? (item.brand||'') : '';
+  var q = item ? (item.quantity||1) : 1;
+  var a = item ? (item.amount === null || item.amount === undefined ? '' : item.amount) : '';
+  var paid = item ? item.isPaid : false;
+  row.innerHTML =
+    '<div class="ir-product"><label>货品名称</label><input type="text" class="form-input ir-pname" list="productList" placeholder="货品" autocomplete="off" value="' + esc(p) + '"></div>' +
+    '<div class="ir-type"><label>售出方式</label><select class="form-input ir-stype"><option value="安装"' + (st==='安装'?' selected':'') + '>安装</option><option value="拿货"' + (st==='拿货'?' selected':'') + '>拿货</option><option value="包木架"' + (st==='包木架'?' selected':'') + '>包木架</option></select></div>' +
+    '<div class="ir-brand"><label>品牌型号</label><input type="text" class="form-input ir-pbrand" list="brandList" placeholder="选填" value="' + esc(b) + '"></div>' +
+    '<div class="ir-qty"><label>数量</label><input type="number" class="form-input ir-pqty" placeholder="1" step="1" min="0" inputmode="numeric" value="' + q + '"></div>' +
+    '<div class="ir-amount"><label>金额</label><input type="number" class="form-input ir-pamt" placeholder="选填" step="0.01" inputmode="decimal" value="' + a + '"></div>' +
+    '<div class="ir-paid"><input type="checkbox" class="ir-ppaid"' + (paid?' checked':'') + '><label>已付</label></div>' +
+    '<button class="ir-del" onclick="this.parentElement.remove()">✕</button>';
+  itemsContainer.appendChild(row);
+}
+
+function closeEditRecord(){
+  document.getElementById('editOverlay').classList.remove('show');
+  editingRecordId = null;
+}
+
+function saveEditRecord(){
+  var r = findRecord(editingRecordId);
+  if(!r){ closeEditRecord(); return; }
+
+  var date = document.getElementById('editDate').value;
+  var customer = document.getElementById('editCustomer').value.trim();
+  var isMonthly = document.getElementById('editSwitchMonthly').classList.contains('on');
+
+  if(!date){ showToast('请选择日期'); return; }
+  if(!customer){ showToast('请输入客户名称'); return; }
+
+  // 收集车牌+货品
+  var plates = [];
+  var plateGroups = document.querySelectorAll('#editPlatesContainer .plate-group');
+  var hasValidItem = false;
+
+  plateGroups.forEach(function(pg){
+    var plateStr = pg.querySelector('.pg-plate').value.trim();
+    var items = [];
+    pg.querySelectorAll('.item-row').forEach(function(row){
+      var product = row.querySelector('.ir-pname').value.trim();
+      var stype = row.querySelector('.ir-stype').value;
+      var brand = row.querySelector('.ir-pbrand').value.trim();
+      var qty = parseInt(row.querySelector('.ir-pqty').value) || 1;
+      var amountStr = row.querySelector('.ir-pamt').value.trim();
+      var amount = amountStr === '' ? null : parseFloat(amountStr);
+      var isPaid = row.querySelector('.ir-ppaid').checked;
+      if(product){
+        items.push({
+          id: genId(),
+          product: product,
+          saleType: stype,
+          brand: brand,
+          quantity: qty,
+          amount: amount,
+          isPaid: isPaid
+        });
+        hasValidItem = true;
+      }
+    });
+    if(items.length > 0){
+      plates.push({ plate: plateStr, items: items });
+    }
+  });
+
+  if(!hasValidItem){ showToast('请至少保留一条有效货品'); return; }
+
+  // 更新记录
+  r.date = date;
+  r.customer = customer;
+  r.isMonthly = isMonthly;
+  r.plates = plates;
+
+  // 如果日期或客户变了，可能需要重新合并到同日同客户记录
+  var existing = null;
+  for(var i=0;i<records.length;i++){
+    if(records[i].id !== r.id && records[i].date === date && records[i].customer === customer){
+      existing = records[i];
+      break;
+    }
+  }
+  if(existing){
+    mergePlatesIntoRecord(existing, plates);
+    records = records.filter(function(x){ return x.id !== r.id; });
+    saveData();
+    closeEditRecord();
+    showToast('已保存并合并到同日同客户记录 ✓');
+    updateAll();
+    return;
+  }
+
+  saveData();
+  closeEditRecord();
+  showToast('修改已保存 ✓');
+  updateAll();
+}
+
+/* ========== 搜索功能 ========== */
+function setSearchType(type){
+  searchType = type;
+  document.getElementById('searchTypeCustomer').classList.toggle('active', type==='customer');
+  document.getElementById('searchTypePlate').classList.toggle('active', type==='plate');
+  document.getElementById('searchTypeProduct').classList.toggle('active', type==='product');
+  var input = document.getElementById('searchInput');
+  var placeholders = {customer:'输入客户名称搜索', plate:'输入车牌号码搜索', product:'输入货品名称搜索'};
+  input.placeholder = placeholders[type];
+  input.value = '';
+  doSearch();
+}
+
+function doSearch(){
+  var keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+  var container = document.getElementById('searchResults');
+
+  if(!keyword){
+    container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><div class="text">输入关键词开始搜索</div></div>';
+    return;
+  }
+
+  var allItems = getAllItems();
+  var matched = allItems.filter(function(it){
+    var field;
+    if(searchType==='customer') field = it.customer;
+    else if(searchType==='plate') field = it.plate || '';
+    else field = it.product;
+    return field.toLowerCase().indexOf(keyword) !== -1;
+  });
+
+  // 按时间倒序
+  matched.sort(function(a,b){
+    if(a.date !== b.date) return b.date.localeCompare(a.date);
+    return b.createdAt - a.createdAt;
+  });
+
+  if(matched.length === 0){
+    container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><div class="text">未找到匹配记录</div></div>';
+    return;
+  }
+
+  var totalAmount = 0;
+  var unpaidAmount = 0;
+  matched.forEach(function(it){
+    totalAmount += it.amount || 0;
+    if(!it.isPaid) unpaidAmount += it.amount || 0;
+  });
+
+  var summaryLabel2 = '未付款金额';
+  var summaryValue2 = formatMoney(unpaidAmount)+'元';
+
+  var html = '<div class="search-summary">' +
+    '<div class="search-summary-item"><div class="label">总销售金额</div><div class="value blue">' + formatMoney(totalAmount) + '元</div></div>' +
+    '<div class="search-summary-item"><div class="label">' + summaryLabel2 + '</div><div class="value green">' + summaryValue2 + '</div></div>' +
+    '<div class="search-summary-item"><div class="label">笔数</div><div class="value">' + matched.length + '件</div></div>' +
+  '</div>';
+
+  html += '<div class="section-title">销售明细（时间倒序）<span class="count">' + matched.length + '件</span></div>';
+
+  html += '<div class="day-table-wrap"><table class="day-table">' +
+    '<thead><tr>' +
+    '<th>日期</th>' +
+    '<th>客户</th>' +
+    '<th>车牌</th>' +
+    '<th>货品</th>' +
+    '<th class="center">售出</th>' +
+    '<th class="right">数量</th>' +
+    '<th class="right">金额</th>' +
+    '<th class="center">状态</th>' +
+    '</tr></thead><tbody>';
+
+  matched.forEach(function(it){
+    var rowClass = it.isMonthly ? 'row-monthly' : (!it.isPaid ? 'row-unpaid' : '');
+    if(it.amount === null || it.amount === undefined) rowClass += ' row-pending';
+    var statusBadge = '';
+    if(it.isMonthly) statusBadge += '<span class="badge monthly">月结</span> ';
+    statusBadge += it.isPaid ? '<span class="badge paid">已付</span>' : '<span class="badge unpaid">未付</span>';
+
+    var productText = esc(it.product);
+    if(it.brand) productText += '<span class="sub">' + esc(it.brand) + '</span>';
+
+    html += '<tr class="' + rowClass + '">' +
+      '<td style="white-space:nowrap">' + it.date + '</td>' +
+      '<td>' + esc(it.customer) + '</td>' +
+      '<td>' + (it.plate ? esc(it.plate) : '—') + '</td>' +
+      '<td>' + productText + '</td>' +
+      '<td class="center" style="white-space:nowrap">' + esc(it.saleType||'') + '</td>' +
+      '<td class="right">' + (it.quantity||1) + '</td>' +
+      '<td class="right"><span class="amt">' + (it.amount === null || it.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(it.amount)) + '</span></td>' +
+      '<td class="center" style="white-space:nowrap">' + statusBadge + '</td>' +
+    '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+
+  container.innerHTML = html;
+}
+
+/* ========== 收款提醒 ========== */
+function getReminders(){
+  var today = new Date();
+  var todayStrVal = formatDate(today);
+  var reminders = [];
+  var allItems = getAllItems();
+
+  // 按客户聚合未付款项
+  var customerMap = {};
+  allItems.forEach(function(it){
+    if(it.isPaid) return;
+    if(!customerMap[it.customer]) customerMap[it.customer] = [];
+    customerMap[it.customer].push(it);
+  });
+
+  Object.keys(customerMap).forEach(function(customer){
+    var items = customerMap[customer];
+    var totalUnpaid = 0;
+    var earliestDate = '';
+    items.forEach(function(it){
+      totalUnpaid += it.amount || 0;
+      if(!earliestDate || it.date < earliestDate) earliestDate = it.date;
+    });
+
+    var isMonthly = items.some(function(it){ return it.isMonthly; });
+
+    if(isMonthly){
+      // 月结客户：次月1号开始提醒，只统计上月及之前的未付款项
+      var mm = String(today.getMonth() + 1);
+      if(mm.length < 2) mm = '0' + mm;
+      var currentMonthStr = today.getFullYear() + '-' + mm;
+      var dueItems = items.filter(function(it){
+        return it.date.substring(0, 7) < currentMonthStr;
+      });
+      if(dueItems.length > 0){
+        // 按月分组
+        var monthGroups = {};
+        dueItems.forEach(function(it){
+          var m = it.date.substring(0, 7);
+          if(!monthGroups[m]) monthGroups[m] = { month: m, amount: 0, count: 0, items: [] };
+          monthGroups[m].amount += it.amount;
+          monthGroups[m].count++;
+          monthGroups[m].items.push(it);
+        });
+        var months = Object.keys(monthGroups).sort().map(function(k){ return monthGroups[k]; });
+        var dueTotal = 0;
+        dueItems.forEach(function(it){ dueTotal += it.amount; });
+        reminders.push({
+          customer: customer,
+          amount: dueTotal,
+          count: dueItems.length,
+          type: 'monthly',
+          earliestDate: earliestDate,
+          months: months,
+          msg: '月结客户，次月1号起应收款，请尽快催收'
+        });
+      }
+    } else {
+      var yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      var yesterdayStr = formatDate(yesterday);
+
+      var needsRemind = false;
+      var overdueDays = 0;
+      items.forEach(function(it){
+        if(it.date <= yesterdayStr){
+          needsRemind = true;
+          var saleDate = new Date(it.date);
+          var diffDays = Math.floor((today - saleDate) / (1000*60*60*24));
+          if(diffDays > overdueDays) overdueDays = diffDays;
+        }
+      });
+
+      if(needsRemind){
+        reminders.push({
+          customer: customer,
+          amount: totalUnpaid,
+          count: items.length,
+          type: 'nm',
+          earliestDate: earliestDate,
+          overdueDays: overdueDays,
+          msg: '非月结客户，已逾期' + overdueDays + '天，请尽快收款'
+        });
+      }
+    }
+  });
+
+  reminders.sort(function(a,b){ return b.amount - a.amount; });
+  return reminders;
+}
+
+function renderReminders(){
+  var reminders = getReminders();
+  var container = document.getElementById('reminderList');
+  var banner = document.getElementById('reminderBanner');
+
+  // 提醒数量标记
+  var dot = document.getElementById('remindDot');
+  dot.style.display = reminders.length > 0 ? 'block' : 'none';
+
+  if(reminders.length === 0){
+    banner.innerHTML = '';
+    container.innerHTML = '<div class="empty-state"><div class="icon">✅</div><div class="text">暂无待收款提醒<br>所有款项已结清</div></div>';
+    return;
+  }
+
+  // 顶部横幅
+  var monthlyCount = reminders.filter(function(r){ return r.type==='monthly'; }).length;
+  var nmCount = reminders.filter(function(r){ return r.type==='nm'; }).length;
+  var bannerText = '🔔 当前有 ' + reminders.length + ' 笔待收款';
+  if(monthlyCount > 0) bannerText += '，月结 ' + monthlyCount + ' 笔';
+  if(nmCount > 0) bannerText += '，非月结 ' + nmCount + ' 笔';
+  banner.innerHTML = '<div class="reminder-banner">' + bannerText + '</div>';
+
+  var html = '<div class="section-title">待收款列表 <span class="count">' + reminders.length + '</span></div>';
+  reminders.forEach(function(rem){
+    var cardClass = rem.type==='monthly' ? 'monthly-remind' : 'nm-remind';
+    var badgeClass = rem.type==='monthly' ? 'monthly' : 'nm';
+    var badgeText = rem.type==='monthly' ? '月结客户' : '非月结 · 逾期' + rem.overdueDays + '天';
+
+    var detailHtml = '';
+    if(rem.type === 'monthly' && rem.months){
+      // 月结客户：按月分组显示
+      rem.months.forEach(function(mg){
+        detailHtml += '<div class="month-group">' +
+          '<div class="month-group-header">' + mg.month + ' <span class="month-group-count">' + mg.count + '笔</span> <span class="month-group-amt">' + formatMoney(mg.amount) + '元</span></div>';
+        mg.items.forEach(function(it){
+          var mPending = (it.amount === null || it.amount === undefined) ? ' style="color:#e6a000"' : '';
+          detailHtml += '<div class="month-group-item"' + mPending + '>' +
+            it.date.substring(8) + '日 ' + esc(it.product) + (it.brand ? ' · ' + esc(it.brand) : '') + (it.plate ? ' · [' + esc(it.plate) + ']' : '') + ' · ' + (it.amount === null || it.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(it.amount) + '元') + '</div>';
+        });
+        detailHtml += '</div>';
+      });
+    } else {
+      // 非月结客户：平铺显示
+      var custItems = getAllItems().filter(function(it){
+        return it.customer === rem.customer && !it.isPaid;
+      }).sort(function(a,b){
+        if(a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.createdAt - b.createdAt;
+      });
+      custItems.forEach(function(it){
+        var cPendingStyle = (it.amount === null || it.amount === undefined) ? '#e6a000' : '#888';
+        detailHtml += '<div style="font-size:12px;color:' + cPendingStyle + ';padding:2px 0;border-top:1px dashed #f0f0f0;margin-top:2px">' +
+          it.date + ' · ' + esc(it.product) + (it.brand ? ' · ' + esc(it.brand) : '') + (it.plate ? ' · [' + esc(it.plate) + ']' : '') + ' · ' + (it.amount === null || it.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(it.amount) + '元') + '</div>';
+      });
+    }
+
+    html += '<div class="reminder-card ' + cardClass + '">' +
+      '<div class="reminder-top">' +
+        '<div>' +
+          '<div class="reminder-customer">' + esc(rem.customer) + '</div>' +
+          '<div class="reminder-info">' + rem.msg + '</div>' +
+          '<span class="reminder-badge ' + badgeClass + '">' + badgeText + '</span>' +
+        '</div>' +
+        '<div class="reminder-amount">' + formatMoney(rem.amount) + '元</div>' +
+      '</div>' +
+      '<div class="reminder-date">共 ' + rem.count + ' 笔未付款，最早：' + rem.earliestDate + '</div>' +
+      detailHtml +
+      '<div class="reminder-action">' +
+        '<button class="btn-mark-paid" onclick="markCustomerPaid(\'' + esc(rem.customer) + '\')">全部标记已付款</button>' +
+      '</div>' +
+    '</div>';
+  });
+
+  container.innerHTML = html;
+}
+
+function markCustomerPaid(customer){
+  showModal('确认收款', '将 ' + customer + ' 的所有未付款项标记为已付款？', function(){
+    records.forEach(function(r){
+      if(r.customer === customer && r.plates){
+        r.plates.forEach(function(pg){
+          pg.items.forEach(function(item){
+            if(!item.isPaid) item.isPaid = true;
+          });
+        });
+      }
+    });
+    saveData();
+    showToast('已标记收款 ✓');
+    updateAll();
+  });
+}
+
+/* ========== 汇总更新 ========== */
+function updateSummary(){
+  var today = todayStr();
+  var total = 0;
+  var unpaid = 0;
+  records.forEach(function(r){
+    if(r.date === today){
+      var items = flattenItems(r);
+      items.forEach(function(it){
+        total += it.amount || 0;
+        if(!it.isPaid) unpaid += it.amount || 0;
+      });
+    }
+  });
+  // 如果录入表单日期为今天，加上表单中未保存的金额
+  var formDate = document.getElementById('entryDate');
+  if(formDate && formDate.value === today){
+    var plateGroups = document.querySelectorAll('#platesContainer .item-row');
+    plateGroups.forEach(function(row){
+      var amtStr = row.querySelector('.ir-pamt').value.trim();
+      var isPaid = row.querySelector('.ir-ppaid').checked;
+      if(amtStr !== ''){
+        var amt = parseFloat(amtStr);
+        if(!isNaN(amt)){
+          total += amt;
+          if(!isPaid) unpaid += amt;
+        }
+      }
+    });
+  }
+  document.getElementById('totalAmount').innerHTML = formatMoney(total) + '<span class="unit">元</span>';
+  document.getElementById('unpaidAmount').innerHTML = formatMoney(unpaid) + '<span class="unit">元</span>';
+}
+
+/* ========== 自动补全数据 ========== */
+function updateDatalists(){
+  var customers = {};
+  var products = {};
+  var plates = {};
+  var brands = {};
+  var allItems = getAllItems();
+  allItems.forEach(function(it){
+    customers[it.customer] = true;
+    products[it.product] = true;
+    if(it.plate) plates[it.plate] = true;
+    if(it.brand) brands[it.brand] = true;
+  });
+  document.getElementById('customerList').innerHTML = Object.keys(customers).map(function(c){
+    return '<option value="' + esc(c) + '">';
+  }).join('');
+  document.getElementById('productList').innerHTML = Object.keys(products).map(function(p){
+    return '<option value="' + esc(p) + '">';
+  }).join('');
+  document.getElementById('plateList').innerHTML = Object.keys(plates).map(function(p){
+    return '<option value="' + esc(p) + '">';
+  }).join('');
+  document.getElementById('brandList').innerHTML = Object.keys(brands).map(function(b){
+    return '<option value="' + esc(b) + '">';
+  }).join('');
+}
+
+/* ========== 统一更新 ========== */
+function updateAll(){
+  updateSummary();
+  renderRecords();
+  doSearch();
+  renderReminders();
+  updateDatalists();
+  renderStats();
+}
+
+/* ========== Tab切换 ========== */
+function switchTab(name){
+  document.querySelectorAll('.tab-content').forEach(function(t){
+    t.classList.remove('active');
+  });
+  document.querySelectorAll('.bottom-nav button').forEach(function(b){
+    b.classList.remove('active');
+  });
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelector('.bottom-nav button[data-tab="' + name + '"]').classList.add('active');
+
+  if(name === 'records') renderRecords();
+  if(name === 'search') doSearch();
+  if(name === 'remind') renderReminders();
+  if(name === 'stats') renderStats();
+}
+
+/* ========== Toast ========== */
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 1800);
+}
+
+/* ========== 统计面板 ========== */
+function shiftStatMonth(delta){
+  if(!statMonth){
+    var d = new Date();
+    statMonth = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2);
+  }
+  statMonth = shiftMonthBy(statMonth, delta);
+  renderStats();
+}
+
+function renderStats(){
+  if(!statMonth){
+    var d = new Date();
+    statMonth = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2);
+  }
+  var parts = statMonth.split('-');
+  document.getElementById('statMonthLabel').textContent = parts[0] + '年' + parseInt(parts[1]) + '月';
+
+  var container = document.getElementById('statsContent');
+  var allItems = getAllItems();
+  var monthItems = allItems.filter(function(it){ return it.date && it.date.substring(0,7) === statMonth; });
+
+  if(monthItems.length === 0 && allItems.length > 0){
+    container.innerHTML = '<div class="empty-state"><div class="icon">📊</div><div class="text">本月暂无销售记录</div></div>';
+    return;
+  }
+  if(allItems.length === 0){
+    container.innerHTML = '<div class="empty-state"><div class="icon">📊</div><div class="text">暂无数据，开始录入后这里会显示统计</div></div>';
+    return;
+  }
+
+  // 月度汇总
+  var monthTotal = 0, monthPaid = 0, monthUnpaid = 0, monthCount = monthItems.length;
+  monthItems.forEach(function(it){
+    monthTotal += it.amount;
+    if(it.isPaid) monthPaid += it.amount;
+    else monthUnpaid += it.amount;
+  });
+
+  // 年度汇总
+  var yearStr = parts[0];
+  var yearItems = allItems.filter(function(it){ return it.date && it.date.substring(0,4) === yearStr; });
+  var yearTotal = 0, yearUnpaid = 0;
+  yearItems.forEach(function(it){
+    yearTotal += it.amount;
+    if(!it.isPaid) yearUnpaid += it.amount;
+  });
+
+  var html = '';
+
+  // 月度统计卡片
+  html += '<div class="stat-cards">' +
+    '<div class="stat-card"><div class="sc-label">本月销售</div><div class="sc-value blue">' + formatMoney(monthTotal) + '<span class="sc-unit">元</span></div></div>' +
+    '<div class="stat-card"><div class="sc-label">已收款</div><div class="sc-value green">' + formatMoney(monthPaid) + '<span class="sc-unit">元</span></div></div>' +
+    '<div class="stat-card"><div class="sc-label">未收款</div><div class="sc-value red">' + formatMoney(monthUnpaid) + '<span class="sc-unit">元</span></div></div>' +
+    '<div class="stat-card"><div class="sc-label">笔数</div><div class="sc-value">' + monthCount + '<span class="sc-unit">笔</span></div></div>' +
+  '</div>';
+
+  // 年度汇总
+  html += '<div class="stat-cards">' +
+    '<div class="stat-card"><div class="sc-label">' + yearStr + '年总销售</div><div class="sc-value blue">' + formatMoney(yearTotal) + '<span class="sc-unit">元</span></div></div>' +
+    '<div class="stat-card"><div class="sc-label">年度未收款</div><div class="sc-value red">' + formatMoney(yearUnpaid) + '<span class="sc-unit">元</span></div></div>' +
+  '</div>';
+
+  // 月结对账单
+  var monthlyUnpaid = {};
+  monthItems.forEach(function(it){
+    if(it.isMonthly && !it.isPaid){
+      if(!monthlyUnpaid[it.customer]) monthlyUnpaid[it.customer] = { amount: 0, count: 0, items: [] };
+      monthlyUnpaid[it.customer].amount += it.amount;
+      monthlyUnpaid[it.customer].count++;
+      monthlyUnpaid[it.customer].items.push(it);
+    }
+  });
+  var monthlyKeys = Object.keys(monthlyUnpaid);
+  if(monthlyKeys.length > 0){
+    html += '<div class="stat-section-title">📋 月结对账单（未收款）</div>';
+    monthlyKeys.forEach(function(cust){
+      var info = monthlyUnpaid[cust];
+      var detailLines = info.items.map(function(it){
+        var lineText = it.date.substring(5) + ' ' + esc(it.product) + (it.plate ? ' [' + esc(it.plate) + ']' : '') + ' ' + (it.amount === null || it.amount === undefined ? '待定' : formatMoney(it.amount) + '元');
+        if(it.amount === null || it.amount === undefined) lineText = '<span style="color:#e6a000">' + lineText + '</span>';
+        return lineText;
+      }).join('<br>');
+      html += '<div class="settle-item">' +
+        '<div class="si-top">' +
+          '<div class="si-customer">' + esc(cust) + '</div>' +
+          '<div class="si-amount">' + formatMoney(info.amount) + '元</div>' +
+        '</div>' +
+        '<div class="si-detail">' + info.count + '笔未付款<br>' + detailLines + '</div>' +
+        '<div class="si-action"><button onclick="markCustomerPaid(\'' + esc(cust).replace(/'/g,"\\'") + '\')">标记已收款</button></div>' +
+      '</div>';
+    });
+  }
+
+  // 客户排行（本月）
+  var custStats = {};
+  monthItems.forEach(function(it){
+    if(!custStats[it.customer]) custStats[it.customer] = { amount: 0, count: 0 };
+    custStats[it.customer].amount += it.amount;
+    custStats[it.customer].count++;
+  });
+  var custRank = Object.keys(custStats).map(function(c){
+    return { name: c, amount: custStats[c].amount, count: custStats[c].count };
+  }).sort(function(a,b){ return b.amount - a.amount; }).slice(0, 5);
+
+  if(custRank.length > 0){
+    html += '<div class="stat-section-title">🏆 客户排行（本月）</div>';
+    html += '<div class="rank-list">';
+    custRank.forEach(function(c, i){
+      html += '<div class="rank-item">' +
+        '<div class="rank-num">' + (i+1) + '</div>' +
+        '<div class="rank-info"><div class="rank-name">' + esc(c.name) + '</div><div class="rank-sub">' + c.count + '笔</div></div>' +
+        '<div class="rank-val">' + formatMoney(c.amount) + '元</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  // 货品排行（本月）
+  var prodStats = {};
+  monthItems.forEach(function(it){
+    if(!prodStats[it.product]) prodStats[it.product] = { amount: 0, count: 0 };
+    prodStats[it.product].amount += it.amount;
+    prodStats[it.product].count++;
+  });
+  var prodRank = Object.keys(prodStats).map(function(p){
+    return { name: p, amount: prodStats[p].amount, count: prodStats[p].count };
+  }).sort(function(a,b){ return b.count - a.count; }).slice(0, 5);
+
+  if(prodRank.length > 0){
+    html += '<div class="stat-section-title">🔥 货品排行（本月）</div>';
+    html += '<div class="rank-list">';
+    prodRank.forEach(function(p, i){
+      html += '<div class="rank-item">' +
+        '<div class="rank-num">' + (i+1) + '</div>' +
+        '<div class="rank-info"><div class="rank-name">' + esc(p.name) + '</div><div class="rank-sub">' + formatMoney(p.amount) + '元</div></div>' +
+        '<div class="rank-val">' + p.count + '笔</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  // 导出按钮
+  html += '<div class="stat-section-title">📥 数据导出</div>';
+  html += '<div class="stat-export-row">' +
+    '<button class="btn-csv" onclick="exportCSV()">📄 导出Excel(CSV)</button>' +
+    '<button class="btn-print" onclick="exportMonthlyReport()">🖨️ 月度报表</button>' +
+  '</div>';
+  html += '<div class="backup-tip">CSV文件可用Excel/WPS打开，适合做账对账。月度报表可直接打印。</div>';
+
+  container.innerHTML = html;
+}
+
+/* ========== CSV导出 ========== */
+function exportCSV(){
+  var allItems = getAllItems();
+  if(allItems.length === 0){ showToast('暂无数据'); return; }
+  var rows = [['日期','客户名称','车牌号码','货品名称','售出方式','品牌型号','数量','销售金额','月结客户','是否付款','录入时间']];
+  // 按日期升序
+  var sorted = allItems.sort(function(a,b){
+    if(a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.createdAt - b.createdAt;
+  });
+  sorted.forEach(function(it){
+    rows.push([
+      it.date || '',
+      it.customer || '',
+      it.plate || '',
+      it.product || '',
+      it.saleType || '',
+      it.brand || '',
+      it.quantity || 1,
+      it.amount === null || it.amount === undefined ? '' : it.amount,
+      it.isMonthly ? '是' : '否',
+      it.isPaid ? '已付款' : '未付款',
+      new Date(it.createdAt).toLocaleString('zh-CN')
+    ]);
+  });
+  // BOM头 + CSV
+  var csv = '\uFEFF' + rows.map(function(row){
+    return row.map(function(cell){
+      var s = String(cell);
+      if(s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1){
+        s = '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }).join(',');
+  }).join('\n');
+
+  var blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var d = new Date();
+  a.href = url;
+  a.download = '东亚玻璃销售记录_' + d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV已导出 ✓');
+}
+
+/* ========== 月度报表（打印） ========== */
+function exportMonthlyReport(){
+  if(!statMonth){ showToast('请先选择月份'); return; }
+  var parts = statMonth.split('-');
+  var allItems = getAllItems();
+  var monthItems = allItems.filter(function(it){ return it.date && it.date.substring(0,7) === statMonth; });
+  if(monthItems.length === 0){ showToast('本月无数据'); return; }
+
+  var total = 0, paid = 0, unpaid = 0;
+  var custData = {};
+  monthItems.forEach(function(it){
+    total += it.amount || 0;
+    if(it.isPaid) paid += it.amount || 0;
+    else unpaid += it.amount || 0;
+    if(!custData[it.customer]) custData[it.customer] = [];
+    custData[it.customer].push(it);
+  });
+
+  var html = '<html><head><meta charset="UTF-8"><title>东亚玻璃月度报表 ' + statMonth + '</title>' +
+    '<style>body{font-family:"Microsoft YaHei",sans-serif;padding:30px;color:#333}h1{text-align:center;font-size:22px}h2{font-size:16px;margin:20px 0 8px;border-bottom:2px solid #1976D2;padding-bottom:4px}.summary{display:flex;gap:20px;margin:15px 0;padding:15px;background:#f5f5f5;border-radius:8px}.summary div{font-size:14px}.summary b{font-size:18px;color:#1976D2}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}th{background:#1976D2;color:#fff;padding:8px 6px;text-align:center}td{border:1px solid #ddd;padding:6px;text-align:center}.monthly{color:#1976D2}.unpaid{color:#d32f2f;font-weight:600}.cust-name{font-weight:700;font-size:15px;margin:12px 0 4px;padding:4px 8px;background:#e3f2fd;border-radius:4px}.footer{text-align:center;margin-top:20px;font-size:12px;color:#999}</style>' +
+    '</head><body>';
+  html += '<h1>东亚汽车玻璃 · 月度销售报表</h1>';
+  html += '<p style="text-align:center;color:#666">' + parts[0] + '年' + parseInt(parts[1]) + '月</p>';
+  html += '<div class="summary">' +
+    '<div>总销售：<b>' + formatMoney(total) + '元</b></div>' +
+    '<div>已收款：<b style="color:#2e7d32">' + formatMoney(paid) + '元</b></div>' +
+    '<div>未收款：<b style="color:#d32f2f">' + formatMoney(unpaid) + '元</b></div>' +
+    '<div>共 ' + monthItems.length + ' 件</div>' +
+  '</div>';
+
+  // 按客户分组
+  html += '<h2>按客户明细</h2>';
+  Object.keys(custData).sort().forEach(function(cust){
+    var items = custData[cust].sort(function(a,b){ return a.date.localeCompare(b.date); });
+    var custTotal = 0;
+    items.forEach(function(it){ custTotal += it.amount; });
+    html += '<div class="cust-name">' + esc(cust) + ' — 合计 ' + formatMoney(custTotal) + '元（' + items.length + '件）</div>';
+    html += '<table><tr><th>日期</th><th>车牌</th><th>货品</th><th>品牌型号</th><th>数量</th><th>金额</th><th>类型</th><th>付款</th></tr>';
+    items.forEach(function(it){
+      var expStyle = (it.amount === null || it.amount === undefined) ? ' style="color:#e6a000"' : '';
+      html += '<tr' + expStyle + '>' +
+        '<td>' + it.date + '</td>' +
+        '<td>' + (it.plate ? esc(it.plate) : '-') + '</td>' +
+        '<td>' + esc(it.product) + '</td>' +
+        '<td>' + (it.brand ? esc(it.brand) : '-') + '</td>' +
+        '<td>' + (it.quantity||1) + '</td>' +
+        '<td>' + (it.amount === null || it.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(it.amount)) + '</td>' +
+        '<td>' + (it.isMonthly ? '<span class="monthly">月结</span>' : '非月结') + '</td>' +
+        '<td>' + (it.isPaid ? '已付款' : '<span class="unpaid">未付款</span>') + '</td>' +
+      '</tr>';
+    });
+    html += '</table>';
+  });
+
+  html += '<div class="footer">东亚汽车玻璃销售工作台 · 生成于 ' + new Date().toLocaleString('zh-CN') + '</div>';
+  html += '</body></html>';
+
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+}
+
+/* ========== 自动备份提醒 ========== */
+var BACKUP_KEY = 'dongya_last_backup';
+var AUTO_BACKUP_KEY = 'dongya_last_auto_backup';
+function checkBackupReminder(){
+  var last = localStorage.getItem(BACKUP_KEY);
+  if(!last){
+    return records.length > 0; // 有数据但从没备份过
+  }
+  var lastDate = new Date(last);
+  var diff = Math.floor((Date.now() - lastDate.getTime()) / (1000*60*60*24));
+  return diff >= 7;
+}
+function recordBackupTime(){
+  localStorage.setItem(BACKUP_KEY, new Date().toISOString());
+}
+
+/* ========== 自动备份（每30天静默下载） ========== */
+function autoBackup(){
+  if(records.length === 0) return;
+  var last = localStorage.getItem(AUTO_BACKUP_KEY);
+  var now = Date.now();
+  if(last){
+    var diff = Math.floor((now - parseInt(last)) / (1000*60*60*24));
+    if(diff < 30) return; // 不到30天不自动备份
+  }
+  // 静默下载备份
+  var data = getBackupData();
+  var blob = new Blob([data], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var d = new Date();
+  a.href = url;
+  a.download = '东亚玻璃自动备份_' + d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  localStorage.setItem(AUTO_BACKUP_KEY, String(now));
+  recordBackupTime();
+  showToast('已自动备份，请妥善保存文件');
+}
+
+/* ========== 数据容量监控 ========== */
+function getDataSize(){
+  try{
+    var data = localStorage.getItem(STORAGE_KEY) || '';
+    return Math.round(data.length / 1024 * 10) / 10; // KB
+  }catch(e){ return 0; }
+}
+function getDataCapacity(){
+  var allData = '';
+  for(var key in localStorage){
+    allData += localStorage[key];
+  }
+  return Math.round(allData.length / 1024 * 10) / 10; // KB
+}
+
+/* ========== Modal ========== */
+var modalCallback = null;
+function showModal(title, text, callback){
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalText').textContent = text;
+  modalCallback = callback;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('show');
+  modalCallback = null;
+}
+document.getElementById('modalConfirmBtn').onclick = function(){
+  if(modalCallback) modalCallback();
+  closeModal();
+};
+
+/* ========== 工具函数 ========== */
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function formatMoney(n){
+  if(n === undefined || n === null || isNaN(n)) n = 0;
+  return parseFloat(n).toFixed(2).replace(/\.?0+$/,'') || '0';
+}
+
+/* ========== 初始化 ========== */
+loadData();
+document.getElementById('entryDate').value = todayStr();
+initEntryForm();
+bindLiveSummary();
+updateAll();
+
+// 自动备份提醒
+if(records.length > 0 && checkBackupReminder()){
+  var banner = document.createElement('div');
+  banner.className = 'backup-warn';
+  banner.style.cssText = 'margin:10px 14px 0;border-radius:10px';
+  banner.innerHTML = '⚠️ 已超过7天未备份数据，建议及时备份防止丢失 <span style="color:var(--primary);text-decoration:underline;margin-left:4px;cursor:pointer" onclick="openBackup()">去备份</span>';
+  var entryTab = document.getElementById('tab-entry');
+  entryTab.insertBefore(banner, entryTab.firstChild);
+}
+
+// 自动备份（延迟3秒执行，避免影响页面加载）
+setTimeout(function(){
+  try { autoBackup(); } catch(e) {}
+}, 3000);
+
+// PWA Service Worker 注册
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./service-worker.js').then(function(reg){
+      console.log('SW registered');
+    }).catch(function(err){
+      console.log('SW failed: ', err);
+    });
+  });
+}
+
+/* ========== 数据备份与恢复 ========== */
+function openBackup(){
+  // 更新统计
+  var allItems = getAllItems();
+  var totalAmt = 0, unpaidCnt = 0;
+  allItems.forEach(function(it){
+    totalAmt += it.amount || 0;
+    if(!it.isPaid) unpaidCnt++;
+  });
+  document.getElementById('bkRecordCount').textContent = records.length;
+  document.getElementById('bkTotalAmount').textContent = formatMoney(totalAmt);
+  document.getElementById('bkUnpaidCount').textContent = unpaidCnt;
+  // 数据容量
+  var dataSize = getDataSize();
+  var capacity = getDataCapacity();
+  document.getElementById('dataSizeInfo').textContent = dataSize + 'KB（总占用' + capacity + 'KB）';
+  // 重置粘贴区
+  document.getElementById('pasteImportArea').classList.remove('show');
+  document.getElementById('pasteImportText').value = '';
+  // 显示面板
+  document.getElementById('backupOverlay').classList.add('show');
+}
+
+function forceRefresh(){
+  showModal('🔄 强制刷新', '将清除本地缓存并重新加载最新版本。\\n\\n你的销售数据不会丢失（存在localStorage中）。\\n\\n确认刷新？', function(){
+    // Unregister all service workers
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistrations().then(function(registrations){
+        registrations.forEach(function(reg){
+          reg.unregister();
+        });
+        // Clear all caches
+        if('caches' in window){
+          caches.keys().then(function(keys){
+            keys.forEach(function(key){
+              caches.delete(key);
+            });
+          });
+        }
+        // Reload with cache busting
+        setTimeout(function(){
+          window.location.reload(true);
+        }, 300);
+      });
+    } else {
+      window.location.reload(true);
+    }
+  });
+}
+
+function closeBackup(){
+  document.getElementById('backupOverlay').classList.remove('show');
+}
+
+function getBackupData(){
+  return JSON.stringify({
+    app: '东亚汽车玻璃销售工作台',
+    version: '1.0',
+    exportDate: new Date().toISOString(),
+    recordCount: records.length,
+    records: records
+  }, null, 2);
+}
+
+function exportFile(){
+  if(records.length === 0){ showToast('暂无数据可导出'); return; }
+  var data = getBackupData();
+  var blob = new Blob([data], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var d = new Date();
+  var fname = '东亚玻璃备份_' + d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2) + '.json';
+  a.href = url;
+  a.download = fname;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  recordBackupTime();
+  showToast('备份文件已下载 ✓');
+}
+
+function exportClipboard(){
+  if(records.length === 0){ showToast('暂无数据可导出'); return; }
+  var data = getBackupData();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(data).then(function(){
+      recordBackupTime();
+      showToast('数据已复制到剪贴板 ✓');
+    }).catch(function(){
+      // 降级方案
+      fallbackCopy(data);
+    });
+  } else {
+    fallbackCopy(data);
+  }
+}
+
+function fallbackCopy(text){
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try{
+    document.execCommand('copy');
+    recordBackupTime();
+    showToast('数据已复制到剪贴板 ✓');
+  }catch(e){
+    showToast('复制失败，请手动选择');
+  }
+  document.body.removeChild(ta);
+}
+
+function triggerImportFile(){
+  document.getElementById('importFileInput').click();
+}
+
+function importFile(event){
+  var file = event.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var data = JSON.parse(e.target.result);
+      if(!data.records || !Array.isArray(data.records)){
+        showToast('文件格式不正确');
+        return;
+      }
+      doImport(data.records, data.recordCount || data.records.length);
+    }catch(err){
+      showToast('文件解析失败');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // 重置，允许重复选择同一文件
+}
+
+function togglePasteImport(){
+  var area = document.getElementById('pasteImportArea');
+  area.classList.toggle('show');
+  if(area.classList.contains('show')){
+    document.getElementById('pasteImportText').focus();
+  }
+}
+
+function importFromText(){
+  var text = document.getElementById('pasteImportText').value.trim();
+  if(!text){ showToast('请粘贴备份数据'); return; }
+  try{
+    var data = JSON.parse(text);
+    if(!data.records || !Array.isArray(data.records)){
+      showToast('数据格式不正确');
+      return;
+    }
+    doImport(data.records, data.recordCount || data.records.length);
+  }catch(err){
+    showToast('数据解析失败，请检查格式');
+  }
+}
+
+function doImport(importRecords, expectedCount){
+  // 迁移旧格式数据
+  importRecords.forEach(function(r){
+    if(!r.plates){
+      r.plates = [{
+        plate: r.plate || '',
+        items: [{
+          id: r.id,
+          product: r.product || '',
+          brand: r.brand || '',
+          amount: r.amount || 0,
+          isPaid: !!r.isPaid
+        }]
+      }];
+    }
+  });
+  if(records.length > 0){
+    showModal('确认导入', '当前已有 ' + records.length + ' 条记录，导入将覆盖现有数据！\n\n备份文件包含 ' + expectedCount + ' 条记录，确认覆盖导入？', function(){
+      records = importRecords;
+      saveData();
+      updateAll();
+      closeBackup();
+      showToast('数据恢复成功 ✓ 共' + records.length + '条');
+    });
+  } else {
+    records = importRecords;
+    saveData();
+    updateAll();
+    closeBackup();
+    showToast('数据恢复成功 ✓ 共' + records.length + '条');
+  }
+}
+
+function confirmClearAll(){
+  if(records.length === 0){ showToast('暂无数据'); return; }
+  showModal('⚠️ 确认清空', '将永久删除全部 ' + records.length + ' 条记录！\n\n此操作不可恢复，请务必已导出备份！\n\n确认清空所有数据？', function(){
+    records = [];
+    saveData();
+    updateAll();
+    closeBackup();
+    showToast('数据已清空');
+  });
+}
+</script>
+</body>
+</html>
