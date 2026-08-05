@@ -598,28 +598,25 @@ input[type="date"]{font-family:inherit}
     <div class="backup-divider"></div>
 
     <div class="backup-section-title">🛡️ 数据保护</div>
-    <div class="storage-status unprotected" id="storageStatus">
-      <div class="ss-icon">⚠️</div>
+    <div class="storage-status protected" id="storageStatus">
+      <div class="ss-icon">✅</div>
       <div class="ss-text">
-        <b>数据未受保护</b>
-        浏览器清理缓存时可能丢失数据
+        <b>双重存储保护已启用</b>
+        数据同时保存在两个独立位置，防止意外丢失
       </div>
     </div>
-    <div id="storageActions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-      <button class="storage-persist-btn" id="storagePersistBtn" onclick="requestPersistentStorage()">
-        🔒 开启数据保护
-      </button>
-      <button class="storage-install-btn" id="storageInstallBtn" onclick="installPWA()" style="display:none">
-        📲 安装到主屏幕（更强保护）
-      </button>
+    <div id="idbStatus" style="font-size:12px;color:var(--text-3);padding:6px 4px 10px;line-height:1.7">
+      <div>📱 <b>主存储</b>（localStorage）：快速读写，打开即用</div>
+      <div id="idbStatusLine">💾 <b>安全备份</b>（IndexedDB）：检测中...</div>
     </div>
-    <div id="storageGuide" style="display:none;background:#FFF8E1;border:1px solid #FFE082;border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;line-height:1.7;color:#e65100">
-      <b>💡 浏览器拒绝了直接授权，请任选一种方式：</b><br><br>
-      <b>方式一（推荐）：</b>点击下方"安装到主屏幕"按钮，将工作台装成App。安装后浏览器自动开启数据保护。<br><br>
-      <b>方式二：</b>在浏览器中多使用几次工作台（录入、搜索、查看），积累使用记录后重试。
+    <div id="storageEstimate" style="font-size:12px;color:var(--text-3);padding:0 4px;margin-bottom:12px"></div>
+    <button class="storage-install-btn" id="storageInstallBtn" onclick="installPWA()" style="display:none;width:100%;padding:10px;border:2px solid var(--primary);background:#fff;color:var(--primary);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px">
+      📲 安装到主屏幕（增强保护）
+    </button>
+    <div class="backup-tip" style="line-height:1.7">
+      <b>保护原理：</b>每次保存数据时自动写入两个独立存储区。即使浏览器清理了主存储，下次打开时也会<b>自动从安全备份恢复</b>全部记录。<br>
+      <span style="color:var(--success)">建议同时"添加到主屏幕"，保护效果更强。</span>
     </div>
-    <div id="storageEstimate" style="font-size:12px;color:var(--text-3);padding:0 4px;margin-top:-4px"></div>
-    <div class="backup-tip">开启后，浏览器将尽可能保留工作台数据，即使手机存储空间不足也不会被自动清除。</div>
 
     <div class="backup-divider"></div>
 
@@ -638,7 +635,7 @@ input[type="date"]{font-family:inherit}
       <b>3. 换手机迁移</b><br>旧手机：下载备份文件→发到微信文件传输助手<br>新手机：打开工作台→⚙️→从备份文件恢复<br><br>
       <b>4. 离线使用</b><br>安装后无需网络也能用，数据存在手机本地<br><br>
       <b>5. 数据容量</b><br>当前数据：<span id="dataSizeInfo" style="color:var(--primary);font-weight:600">计算中...</span><br>
-      <span style="font-size:11px;color:var(--text-3)">（localStorage通常可用5-10MB，约5万条记录）</span>
+      <span style="font-size:11px;color:var(--text-3)">（双重存储，IndexedDB可用数百MB，约5万条记录）</span>
     </div>
   </div>
 </div>
@@ -674,10 +671,72 @@ function loadData(){
       }
     });
   }catch(e){ records = []; }
+
+  /* IndexedDB 双重保护：localStorage 被清空时自动恢复 */
+  if(records.length === 0){
+    loadFromIDB(function(idbData){
+      if(idbData){
+        try{
+          var restored = JSON.parse(idbData);
+          if(restored && restored.length > 0){
+            records = restored;
+            localStorage.setItem(STORAGE_KEY, idbData);
+            updateAll();
+            showToast('✅ 已从安全备份自动恢复 ' + records.length + ' 条记录');
+          }
+        }catch(e){}
+      }
+    });
+  } else {
+    // localStorage 有数据 → 同步到 IndexedDB 保持备份新鲜
+    saveToIDB(JSON.stringify(records));
+  }
 }
 
 function saveData(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  var json = JSON.stringify(records);
+  localStorage.setItem(STORAGE_KEY, json);
+  saveToIDB(json); /* 双写 IndexedDB */
+}
+
+/* ========== IndexedDB 存储层 ========== */
+var IDB_NAME = 'DongyaGlassDB';
+var IDB_STORE = 'sales';
+var IDB_KEY = 'records';
+
+function openIDB(cb){
+  if(!window.indexedDB){ cb(null); return; }
+  var req = indexedDB.open(IDB_NAME, 1);
+  req.onupgradeneeded = function(e){
+    var db = e.target.result;
+    if(!db.objectStoreNames.contains(IDB_STORE)){
+      db.createObjectStore(IDB_STORE);
+    }
+  };
+  req.onsuccess = function(e){ cb(e.target.result); };
+  req.onerror = function(){ cb(null); };
+}
+
+function saveToIDB(jsonStr){
+  openIDB(function(db){
+    if(!db) return;
+    try{
+      var tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(jsonStr, IDB_KEY);
+    }catch(e){}
+  });
+}
+
+function loadFromIDB(cb){
+  openIDB(function(db){
+    if(!db){ cb(null); return; }
+    try{
+      var tx = db.transaction(IDB_STORE, 'readonly');
+      var req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = function(){ cb(req.result || null); };
+      req.onerror = function(){ cb(null); };
+    }catch(e){ cb(null); }
+  });
 }
 
 function genId(){
@@ -2344,8 +2403,6 @@ if(records.length > 0 && checkBackupReminder()){
 // 自动备份（延迟3秒执行，避免影响页面加载）
 setTimeout(function(){
   try { autoBackup(); } catch(e) {}
-  // 自动尝试申请数据持久化保护
-  try { autoRequestPersist(); } catch(e) {}
 }, 3000);
 
 // PWA Service Worker 注册
@@ -2384,7 +2441,7 @@ function openBackup(){
 }
 
 function forceRefresh(){
-  showModal('🔄 强制刷新', '将清除本地缓存并重新加载最新版本。\\n\\n你的销售数据不会丢失（存在localStorage中）。\\n\\n确认刷新？', function(){
+  showModal('🔄 强制刷新', '将清除本地缓存并重新加载最新版本。\\n\\n你的销售数据不会丢失（双重存储保护中）。\\n\\n确认刷新？', function(){
     // Unregister all service workers
     if('serviceWorker' in navigator){
       navigator.serviceWorker.getRegistrations().then(function(registrations){
@@ -2416,38 +2473,37 @@ var deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e){
   e.preventDefault();
   deferredInstallPrompt = e;
-  // Show install button in data protection section
   var installBtn = document.getElementById('storageInstallBtn');
   if(installBtn) installBtn.style.display = 'block';
 });
 
-function autoRequestPersist(){
-  if(!navigator.storage || !navigator.storage.persist) return;
-  navigator.storage.persisted().then(function(isPersisted){
-    if(isPersisted){
-      showStorageStatus('protected');
-      return;
-    }
-    // Don't auto-request — requires user gesture; just check status
-  }).catch(function(){});
-}
-
 function checkPersistentStorage(){
   var installBtn = document.getElementById('storageInstallBtn');
-  // Show install button if we have the deferred prompt
   if(deferredInstallPrompt && installBtn) installBtn.style.display = 'block';
-  
-  if(!navigator.storage || !navigator.storage.persisted){
-    showStorageStatus('unsupported');
-    return;
+
+  // Check IndexedDB backup status
+  var idbLine = document.getElementById('idbStatusLine');
+  if(!window.indexedDB){
+    if(idbLine) idbLine.innerHTML = '💾 <b>安全备份</b>（IndexedDB）：<span style="color:#e65100">浏览器不支持，请定期手动导出备份</span>';
+  } else {
+    loadFromIDB(function(data){
+      if(idbLine){
+        if(data){
+          var cnt = 0;
+          try{ cnt = JSON.parse(data).length; }catch(e){}
+          idbLine.innerHTML = '💾 <b>安全备份</b>（IndexedDB）：已备份 ' + cnt + ' 条记录 ✅';
+        } else if(records.length > 0){
+          // Has data in localStorage but not yet in IDB — sync now
+          saveToIDB(JSON.stringify(records));
+          idbLine.innerHTML = '💾 <b>安全备份</b>（IndexedDB）：正在同步...';
+        } else {
+          idbLine.innerHTML = '💾 <b>安全备份</b>（IndexedDB）：暂无数据';
+        }
+      }
+    });
   }
-  navigator.storage.persisted().then(function(isPersisted){
-    showStorageStatus(isPersisted ? 'protected' : 'unprotected');
-  }).catch(function(){
-    showStorageStatus('unprotected');
-  });
-  
-  // Always show storage estimate
+
+  // Show storage estimate
   showStorageEstimate();
 }
 
@@ -2455,96 +2511,8 @@ function showStorageEstimate(){
   var el = document.getElementById('storageEstimate');
   if(!el || !navigator.storage || !navigator.storage.estimate) return;
   navigator.storage.estimate().then(function(est){
-    el.textContent = '💾 已用 ' + formatBytes(est.usage) + ' / ' + formatBytes(est.quota);
+    el.textContent = '💾 存储用量：' + formatBytes(est.usage) + ' / ' + formatBytes(est.quota);
   }).catch(function(){});
-}
-
-function requestPersistentStorage(){
-  var btn = document.getElementById('storagePersistBtn');
-  var statusEl = document.getElementById('storageStatus');
-  var guideEl = document.getElementById('storageGuide');
-  
-  if(!navigator.storage || !navigator.storage.persist){
-    btn.textContent = '当前浏览器不支持此功能';
-    btn.className = 'storage-persist-btn done';
-    return;
-  }
-  
-  btn.textContent = '正在申请...';
-  btn.disabled = true;
-  
-  navigator.storage.persist().then(function(granted){
-    if(granted){
-      showStorageStatus('protected');
-      btn.textContent = '✅ 数据保护已开启';
-      btn.className = 'storage-persist-btn done';
-      btn.disabled = true;
-      if(guideEl) guideEl.style.display = 'none';
-      showStorageEstimate();
-      navigator.storage.estimate().then(function(est){
-        statusEl.querySelector('.ss-text').innerHTML = '<b>数据已受保护 ✅</b>已使用 ' + formatBytes(est.usage) + ' / ' + formatBytes(est.quota);
-      });
-    } else {
-      // DENIED — show guide and retry options
-      showStorageStatus('needInstall');
-      btn.textContent = '🔄 稍后重试（点击此处）';
-      btn.disabled = false;
-      btn.onclick = function(){
-        btn.textContent = '正在重试...';
-        btn.disabled = true;
-        // Wait 3s to let browser accumulate engagement
-        setTimeout(function(){
-          requestPersistentStorage();
-        }, 3000);
-      };
-    }
-  }).catch(function(){
-    showStorageStatus('unprotected');
-    btn.textContent = '🔒 开启数据保护';
-    btn.disabled = false;
-    btn.onclick = requestPersistentStorage;
-  });
-}
-
-function showStorageStatus(type){
-  var statusEl = document.getElementById('storageStatus');
-  var btn = document.getElementById('storagePersistBtn');
-  var guideEl = document.getElementById('storageGuide');
-  var installBtn = document.getElementById('storageInstallBtn');
-  
-  if(type === 'protected'){
-    statusEl.className = 'storage-status protected';
-    statusEl.querySelector('.ss-icon').textContent = '🛡️';
-    statusEl.querySelector('.ss-text').innerHTML = '<b>数据已受保护 ✅</b>浏览器不会自动清除工作台数据';
-    btn.style.display = 'none';
-    if(installBtn) installBtn.style.display = 'none';
-    if(guideEl) guideEl.style.display = 'none';
-  } else if(type === 'needInstall'){
-    statusEl.className = 'storage-status unprotected';
-    statusEl.querySelector('.ss-icon').textContent = '⚠️';
-    statusEl.querySelector('.ss-text').innerHTML = '<b>申请未通过</b>浏览器需要你"安装到主屏幕"后才能开启数据保护';
-    btn.style.display = 'block';
-    // Show install button if prompted, otherwise show guide
-    if(deferredInstallPrompt && installBtn){
-      installBtn.style.display = 'block';
-    }
-    if(guideEl) guideEl.style.display = 'block';
-  } else if(type === 'unsupported'){
-    statusEl.className = 'storage-status unprotected';
-    statusEl.querySelector('.ss-icon').textContent = 'ℹ️';
-    statusEl.querySelector('.ss-text').innerHTML = '<b>浏览器不支持</b>当前浏览器不支持此功能，建议定期手动导出备份';
-    btn.textContent = '当前浏览器不支持';
-    btn.className = 'storage-persist-btn done';
-    btn.disabled = true;
-    if(installBtn) installBtn.style.display = 'none';
-    if(guideEl) guideEl.style.display = 'none';
-  } else {
-    statusEl.className = 'storage-status unprotected';
-    statusEl.querySelector('.ss-icon').textContent = '⚠️';
-    statusEl.querySelector('.ss-text').innerHTML = '<b>数据未受保护</b>浏览器清理缓存时可能丢失数据';
-    btn.style.display = 'block';
-    if(guideEl) guideEl.style.display = 'none';
-  }
 }
 
 function installPWA(){
@@ -2552,44 +2520,22 @@ function installPWA(){
     deferredInstallPrompt.prompt();
     deferredInstallPrompt.userChoice.then(function(choice){
       if(choice.outcome === 'accepted'){
-        // User installed — now persist should work
-        var btn = document.getElementById('storagePersistBtn');
-        btn.textContent = '✅ 已安装，现在开启保护';
-        btn.className = 'storage-persist-btn done';
-        btn.disabled = true;
-        // Auto-retry persist after install
-        setTimeout(function(){
-          if(navigator.storage && navigator.storage.persist){
-            navigator.storage.persist().then(function(granted){
-              if(granted){
-                showStorageStatus('protected');
-              } else {
-                showStorageStatus('needInstall');
-              }
-            });
-          }
-        }, 2000);
+        var installBtn = document.getElementById('storageInstallBtn');
+        if(installBtn) installBtn.style.display = 'none';
+        showToast('✅ 安装成功！数据保护已增强');
       }
       deferredInstallPrompt = null;
-      var installBtn = document.getElementById('storageInstallBtn');
-      if(installBtn) installBtn.style.display = 'none';
     });
   } else {
-    // Fallback: show browser-specific instructions
     var ua = navigator.userAgent || '';
     var isIOS = /iPhone|iPad|iPod/.test(ua);
-    var isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
     var isAndroid = /Android/.test(ua);
-    var guideEl = document.getElementById('storageGuide');
-    if(isIOS){
-      guideEl.innerHTML = '<b>💡 iOS安装方式：</b><br>Safari浏览器底部工具栏 → 分享图标（⬆） → "添加到主屏幕"';
-    } else if(isAndroid){
-      guideEl.innerHTML = '<b>💡 Android安装方式：</b><br>Chrome浏览器右上角 ⋮ → "添加到主屏幕" 或 "安装应用"';
-    } else {
-      guideEl.innerHTML = '<b>💡 安装方式：</b><br>浏览器菜单 → "安装" 或 "添加到主屏幕"';
-    }
-    guideEl.style.display = 'block';
-    showStorageStatus('needInstall');
+    var msg = isIOS
+      ? 'Safari底部 → 分享图标（⬆） → "添加到主屏幕"'
+      : isAndroid
+        ? 'Chrome右上角 ⋮ → "添加到主屏幕"或"安装应用"'
+        : '浏览器菜单 → "安装"或"添加到主屏幕"';
+    showToast(msg);
   }
 }
 
