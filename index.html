@@ -146,6 +146,24 @@ input[type="date"]{font-family:inherit}
 .btn-add-item{width:100%;padding:6px;border:1px dashed #ccc;background:#fafafa;color:var(--text-2);border-radius:6px;font-size:12px;cursor:pointer;margin-top:4px}
 .btn-add-item:active{background:#f0f0f0}
 
+/* 自定义下拉选择（不遮挡页面，替代原生select） */
+.custom-select{position:relative;width:100%;user-select:none;-webkit-user-select:none}
+.custom-select .cs-trigger{display:flex;align-items:center;justify-content:space-between;gap:3px;padding:10px 8px 10px 6px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:#fafafa;cursor:pointer;transition:border-color .2s;line-height:1.3}
+.custom-select.open .cs-trigger{border-color:var(--primary);background:#fff;border-radius:8px 8px 0 0}
+.custom-select .cs-arrow{font-size:9px;color:var(--text-3);transition:transform .2s;flex-shrink:0;line-height:1}
+.custom-select.open .cs-arrow{transform:rotate(180deg)}
+.custom-select .cs-options{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--primary);border-top:none;border-radius:0 0 8px 8px;z-index:1000;display:none;box-shadow:0 6px 20px rgba(0,0,0,.15);overflow:hidden}
+.custom-select.open .cs-options{display:block}
+.custom-select .cs-opt{padding:10px 8px;font-size:14px;cursor:pointer;transition:background .1s;border-top:1px solid #f0f0f0;text-align:center}
+.custom-select .cs-opt:first-child{border-top:none}
+.custom-select .cs-opt:active,.custom-select .cs-opt:hover{background:var(--primary-light)}
+.custom-select .cs-opt.selected{background:var(--primary-light);color:var(--primary-dark);font-weight:600}
+/* 在录入表格里让下拉紧凑一些 */
+.item-row .ir-type{width:80px}
+.item-row .ir-brand{width:74px}
+.item-row .custom-select .cs-trigger{padding:9px 4px 9px 3px;font-size:13px}
+.item-row .custom-select .cs-opt{padding:9px 4px;font-size:13px}
+
 /* ===== 记录列表（按日表格） ===== */
 .day-group{margin-bottom:14px}
 .day-header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:linear-gradient(135deg,#e3f2fd,#bbdefb);border-radius:8px 8px 0 0;font-size:14px;font-weight:600;color:#1565c0}
@@ -910,7 +928,7 @@ function addItemRow(gid){
   row.innerHTML =
     '<div class="ir-product"><label>货品名称</label><input type="text" class="form-input ir-pname" list="productList" placeholder="货品" autocomplete="off"></div>' +
     '<datalist id="productList"></datalist>' +
-    '<div class="ir-type"><label>售出方式</label><select class="form-input ir-stype"><option value="安装">安装</option><option value="拿货">拿货</option><option value="包木架">包木架</option></select></div>' +
+    '<div class="ir-type"><label>售出方式</label><div class="custom-select" onclick="event.stopPropagation();toggleCustomSelect(this)"><div class="cs-trigger"><span>安装</span><span class="cs-arrow">▼</span></div><div class="cs-options"><div class="cs-opt selected" data-value="安装" onclick="event.stopPropagation();selectOption(this)">安装</div><div class="cs-opt" data-value="拿货" onclick="event.stopPropagation();selectOption(this)">拿货</div><div class="cs-opt" data-value="包木架" onclick="event.stopPropagation();selectOption(this)">包木架</div></div><input type="hidden" class="ir-stype" value="安装"></div></div>' +
     '<div class="ir-brand"><label>品牌型号</label><input type="text" class="form-input ir-pbrand" list="brandList" placeholder="选填"></div>' +
     '<datalist id="brandList"></datalist>' +
     '<div class="ir-qty"><label>数量</label><input type="number" class="form-input ir-pqty" placeholder="1" step="1" min="0" inputmode="numeric" value="1"></div>' +
@@ -930,6 +948,45 @@ function removePlateGroup(gid){
   }
   updateSummary();
 }
+
+/* ===== 自定义下拉选择 ===== */
+function toggleCustomSelect(el){
+  var isOpening = !el.classList.contains('open');
+  // 关闭所有其他下拉
+  document.querySelectorAll('.custom-select.open').forEach(function(cs){
+    cs.classList.remove('open');
+  });
+  if(isOpening) el.classList.add('open');
+}
+
+function selectOption(opt){
+  var cs = opt.closest('.custom-select');
+  var val = opt.getAttribute('data-value');
+  cs.querySelector('.ir-stype').value = val;
+  cs.querySelector('.cs-trigger span').textContent = val;
+  cs.querySelectorAll('.cs-opt').forEach(function(o){ o.classList.remove('selected'); });
+  opt.classList.add('selected');
+  cs.classList.remove('open');
+  updateSummary();
+}
+
+// 点击页面其他地方关闭下拉
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.custom-select')){
+    document.querySelectorAll('.custom-select.open').forEach(function(cs){
+      cs.classList.remove('open');
+    });
+  }
+});
+
+// 触摸滚动时也关闭下拉
+document.addEventListener('touchstart', function(e){
+  if(!e.target.closest('.custom-select') && !e.target.closest('.cs-options')){
+    document.querySelectorAll('.custom-select.open').forEach(function(cs){
+      cs.classList.remove('open');
+    });
+  }
+}, {passive:true});
 
 function initEntryForm(){
   plateGroupCounter = 0;
@@ -1562,7 +1619,7 @@ function addEditItemRow(gid, item){
   var paid = item ? item.isPaid : false;
   row.innerHTML =
     '<div class="ir-product"><label>货品名称</label><input type="text" class="form-input ir-pname" list="productList" placeholder="货品" autocomplete="off" value="' + esc(p) + '"></div>' +
-    '<div class="ir-type"><label>售出方式</label><select class="form-input ir-stype"><option value="安装"' + (st==='安装'?' selected':'') + '>安装</option><option value="拿货"' + (st==='拿货'?' selected':'') + '>拿货</option><option value="包木架"' + (st==='包木架'?' selected':'') + '>包木架</option></select></div>' +
+    '<div class="ir-type"><label>售出方式</label><div class="custom-select" onclick="event.stopPropagation();toggleCustomSelect(this)"><div class="cs-trigger"><span>' + st + '</span><span class="cs-arrow">▼</span></div><div class="cs-options"><div class="cs-opt' + (st==='安装'?' selected':'') + '" data-value="安装" onclick="event.stopPropagation();selectOption(this)">安装</div><div class="cs-opt' + (st==='拿货'?' selected':'') + '" data-value="拿货" onclick="event.stopPropagation();selectOption(this)">拿货</div><div class="cs-opt' + (st==='包木架'?' selected':'') + '" data-value="包木架" onclick="event.stopPropagation();selectOption(this)">包木架</div></div><input type="hidden" class="ir-stype" value="' + st + '"></div></div>' +
     '<div class="ir-brand"><label>品牌型号</label><input type="text" class="form-input ir-pbrand" list="brandList" placeholder="选填" value="' + esc(b) + '"></div>' +
     '<div class="ir-qty"><label>数量</label><input type="number" class="form-input ir-pqty" placeholder="1" step="1" min="0" inputmode="numeric" value="' + q + '"></div>' +
     '<div class="ir-amount"><label>金额</label><input type="number" class="form-input ir-pamt" placeholder="选填" step="0.01" inputmode="decimal" value="' + a + '"></div>' +
