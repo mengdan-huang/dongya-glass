@@ -1,4 +1,4 @@
-var CACHE_NAME = 'dongya-glass-v25';
+var CACHE_NAME = 'dongya-glass-v26';
 var ASSETS = [
   './',
   './index.html',

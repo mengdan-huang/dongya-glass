@@ -55,6 +55,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 .backup-btn.clear{background:var(--card);color:var(--danger);border:1.5px solid var(--danger)}
 .backup-btn .b-icon{font-size:18px}
 .backup-tip{font-size:12px;color:var(--text-3);line-height:1.6;margin-top:4px;padding:0 4px}
+.storage-status{padding:10px 14px;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.storage-status.protected{background:#E8F5E9;color:#2e7d32}
+.storage-status.unprotected{background:#FFF3E0;color:#e65100}
+.storage-status .ss-icon{font-size:22px;flex-shrink:0}
+.storage-status .ss-text{flex:1;font-size:13px;line-height:1.5}
+.storage-status .ss-text b{display:block;font-size:14px;margin-bottom:2px}
+.storage-persist-btn{display:block;width:100%;padding:12px;border:2px solid var(--success);background:#fff;color:var(--success);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:12px;transition:all .2s}
+.storage-persist-btn:active{background:var(--success-light)}
+.storage-persist-btn.done{background:var(--success-light);border-color:var(--success-light);cursor:default}
 .backup-divider{height:1px;background:var(--border);margin:16px 0}
 .backup-section-title{font-size:13px;color:var(--text-2);font-weight:600;margin-bottom:10px}
 .import-area{display:none}
@@ -583,6 +592,21 @@ input[type="date"]{font-family:inherit}
       <span class="b-icon">🗑️</span> 清空所有数据
     </button>
     <div class="backup-tip" style="color:var(--danger)">清空后不可恢复，请务必先导出备份！</div>
+
+    <div class="backup-divider"></div>
+
+    <div class="backup-section-title">🛡️ 数据保护</div>
+    <div class="storage-status unprotected" id="storageStatus">
+      <div class="ss-icon">⚠️</div>
+      <div class="ss-text">
+        <b>数据未受保护</b>
+        浏览器清理缓存时可能丢失数据
+      </div>
+    </div>
+    <button class="storage-persist-btn" id="storagePersistBtn" onclick="requestPersistentStorage()">
+      🔒 开启数据保护
+    </button>
+    <div class="backup-tip">开启后，浏览器将尽可能保留工作台数据，即使手机存储空间不足也不会被自动清除。</div>
 
     <div class="backup-divider"></div>
 
@@ -2307,6 +2331,8 @@ if(records.length > 0 && checkBackupReminder()){
 // 自动备份（延迟3秒执行，避免影响页面加载）
 setTimeout(function(){
   try { autoBackup(); } catch(e) {}
+  // 自动尝试申请数据持久化保护
+  try { autoRequestPersist(); } catch(e) {}
 }, 3000);
 
 // PWA Service Worker 注册
@@ -2341,6 +2367,7 @@ function openBackup(){
   document.getElementById('pasteImportText').value = '';
   // 显示面板
   document.getElementById('backupOverlay').classList.add('show');
+  checkPersistentStorage();
 }
 
 function forceRefresh(){
@@ -2368,6 +2395,95 @@ function forceRefresh(){
       window.location.reload(true);
     }
   });
+}
+
+function autoRequestPersist(){
+  if(!navigator.storage || !navigator.storage.persist) return;
+  navigator.storage.persisted().then(function(isPersisted){
+    if(isPersisted) return; // Already protected
+    // Auto-request — if the site has enough user engagement, browser may auto-grant
+    navigator.storage.persist().then(function(granted){
+      if(granted){
+        showStorageStatus('protected');
+        document.getElementById('storagePersistBtn').style.display = 'none';
+      }
+    }).catch(function(){});
+  }).catch(function(){});
+}
+
+function checkPersistentStorage(){
+  if(!navigator.storage || !navigator.storage.persisted){
+    // Browser doesn't support persistent storage API
+    showStorageStatus('unsupported');
+    return;
+  }
+  navigator.storage.persisted().then(function(isPersisted){
+    showStorageStatus(isPersisted ? 'protected' : 'unprotected');
+  }).catch(function(){
+    showStorageStatus('unprotected');
+  });
+}
+
+function requestPersistentStorage(){
+  var btn = document.getElementById('storagePersistBtn');
+  var statusEl = document.getElementById('storageStatus');
+  if(!navigator.storage || !navigator.storage.persist){
+    btn.textContent = '当前浏览器不支持此功能';
+    btn.className = 'storage-persist-btn done';
+    return;
+  }
+  btn.textContent = '正在申请...';
+  btn.disabled = true;
+  navigator.storage.persist().then(function(granted){
+    if(granted){
+      showStorageStatus('protected');
+      btn.textContent = '✅ 数据保护已开启';
+      btn.className = 'storage-persist-btn done';
+      btn.disabled = true;
+      // Also try to estimate storage
+      if(navigator.storage.estimate){
+        navigator.storage.estimate().then(function(est){
+          statusEl.querySelector('.ss-text').innerHTML = '<b>数据已受保护 ✅</b>已使用 ' + formatBytes(est.usage) + ' / ' + formatBytes(est.quota);
+        });
+      }
+    } else {
+      showStorageStatus('unprotected');
+      btn.textContent = '🔒 再次申请保护';
+      btn.disabled = false;
+      statusEl.querySelector('.ss-text').innerHTML = '<b>申请未通过</b>浏览器的数据保护可能需要更多用户交互才能授权。请将本页"添加到主屏幕"后重试。';
+    }
+  }).catch(function(){
+    showStorageStatus('unprotected');
+    btn.textContent = '🔒 开启数据保护';
+    btn.disabled = false;
+  });
+}
+
+function showStorageStatus(type){
+  var statusEl = document.getElementById('storageStatus');
+  var btn = document.getElementById('storagePersistBtn');
+  if(type === 'protected'){
+    statusEl.className = 'storage-status protected';
+    statusEl.querySelector('.ss-icon').textContent = '🛡️';
+    btn.style.display = 'none';
+  } else if(type === 'unsupported'){
+    statusEl.className = 'storage-status unprotected';
+    statusEl.querySelector('.ss-icon').textContent = 'ℹ️';
+    statusEl.querySelector('.ss-text').innerHTML = '<b>浏览器不支持</b>当前浏览器不支持此功能，建议定期手动导出备份';
+    btn.textContent = '当前浏览器不支持';
+    btn.className = 'storage-persist-btn done';
+    btn.disabled = true;
+  } else {
+    statusEl.className = 'storage-status unprotected';
+    statusEl.querySelector('.ss-icon').textContent = '⚠️';
+  }
+}
+
+function formatBytes(bytes){
+  if(!bytes) return '0 KB';
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1048576).toFixed(1) + ' MB';
 }
 
 function closeBackup(){
