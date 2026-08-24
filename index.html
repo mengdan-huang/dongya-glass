@@ -2183,6 +2183,8 @@ function renderStats(){
     }
   });
   var monthlyKeys = Object.keys(monthlyUnpaid);
+  // 是否存在月结客户记录（含已付款），有则显示导出按钮
+  var hasMonthlyRecords = monthItems.some(function(it){ return it.isMonthly; });
   if(monthlyKeys.length > 0){
     html += '<div class="stat-section-title">📋 月结对账单（未收款）</div>';
     monthlyKeys.forEach(function(cust){
@@ -2201,6 +2203,8 @@ function renderStats(){
         '<div class="si-action"><button onclick="markCustomerPaid(\'' + esc(cust).replace(/'/g,"\\'") + '\')">标记已收款</button></div>' +
       '</div>';
     });
+  }
+  if(hasMonthlyRecords){
     html += '<div style="margin-top:8px"><button class="btn-csv" style="width:100%;padding:10px;border:none;border-radius:8px;background:var(--success);color:#fff;font-size:13px;font-weight:600;cursor:pointer" onclick="exportMonthlyBilling()">📤 导出月结对账单(Excel)</button></div>';
   }
 
@@ -2437,35 +2441,41 @@ function buildXlsHtml(title, headers, dataRows, opts){
   return html;
 }
 
-/* ========== 月结对账单导出 ========== */
+/* ========== 月结对账单导出：各月结客户当月全部销售记录 ========== */
 function exportMonthlyBilling(){
   if(!statMonth){ showToast('请先选择月份'); return; }
   var allItems = getAllItems();
   var monthItems = allItems.filter(function(it){ return it.date && it.date.substring(0,7) === statMonth; });
-  // 筛选月结未付款
-  var unpaidItems = monthItems.filter(function(it){ return it.isMonthly && !it.isPaid; });
-  if(unpaidItems.length === 0){ showToast('本月无月结未付款记录'); return; }
+  // 筛选当月所有月结客户的记录（含已付/未付）
+  var monthlyItems = monthItems.filter(function(it){ return it.isMonthly; });
+  if(monthlyItems.length === 0){ showToast('本月无月结客户记录'); return; }
 
   // 按客户分组
   var byCustomer = {};
-  unpaidItems.forEach(function(it){
+  monthlyItems.forEach(function(it){
     if(!byCustomer[it.customer]) byCustomer[it.customer] = [];
     byCustomer[it.customer].push(it);
   });
 
   var parts = statMonth.split('-');
-  var grandTotal = 0;
+  var grandTotal = 0, grandUnpaid = 0;
   var customerNames = Object.keys(byCustomer).sort();
 
-  // 生成 Excel 文件（HTML表格格式，WPS/Excel直接打开）
-  var headers = ['客户名称','日期','车牌号码','货品名称','售出方式','品牌型号','数量','金额(元)','备注'];
+  var headers = ['客户名称','日期','车牌号码','货品名称','售出方式','品牌型号','数量','金额(元)','付款状态'];
   var dataRows = [];
   customerNames.forEach(function(cust){
     var items = byCustomer[cust];
-    var custTotal = 0;
+    var custTotal = 0, custUnpaid = 0;
     items.forEach(function(it){
       var amt = (it.amount === null || it.amount === undefined) ? 0 : it.amount;
       custTotal += amt;
+      if(!it.isPaid) custUnpaid += amt;
+      var statusCell;
+      if(it.isPaid){
+        statusCell = {v:'已付款', __style:'color:#2e7d32;'};
+      } else {
+        statusCell = {v:'未付款', __style:'color:#d32f2f;font-weight:bold;'};
+      }
       dataRows.push([
         cust,
         it.date || '',
@@ -2475,17 +2485,19 @@ function exportMonthlyBilling(){
         it.brand || '',
         it.quantity || 1,
         (it.amount === null || it.amount === undefined) ? {v:'待定', __style:'color:#e6a000;font-weight:bold;'} : amt,
-        '未付款'
+        statusCell
       ]);
     });
-    // 客户小计行（加粗标蓝）
+    // 客户小计行（销售合计 + 其中未收）
     dataRows.push([
       {v:cust + ' 小计', __style:'font-weight:bold;color:#1976D2;'},
       '', '', '', '', '',
-      {v:'小计', __style:'font-weight:bold;color:#1976D2;'},
+      {v:'共' + items.length + '笔', __style:'font-weight:bold;color:#1976D2;'},
       {v:custTotal, __style:'font-weight:bold;color:#1976D2;'},
-      ''
+      {v:custUnpaid > 0 ? '未收:' + custUnpaid : '已结清', __style:'font-weight:bold;color:' + (custUnpaid > 0 ? '#d32f2f' : '#2e7d32') + ';'}
     ]);
+    grandTotal += custTotal;
+    grandUnpaid += custUnpaid;
   });
   // 总计行（加粗标红）
   dataRows.push([
@@ -2493,12 +2505,12 @@ function exportMonthlyBilling(){
     '', '', '', '', '',
     {v:'合计', __style:'font-weight:bold;color:#d32f2f;'},
     {v:grandTotal, __style:'font-weight:bold;font-size:14px;color:#d32f2f;'},
-    ''
+    {v:'未收:' + grandUnpaid, __style:'font-weight:bold;color:#d32f2f;'}
   ]);
 
   showExportModal(
     '月结对账单_' + statMonth + '.xls',
-    '东亚汽车玻璃 · 月结对账单（' + parts[0] + '年' + parseInt(parts[1]) + '月 未收款）',
+    '东亚汽车玻璃 · 月结对账单（' + parts[0] + '年' + parseInt(parts[1]) + '月）',
     headers, dataRows,
     ['导出时间：' + new Date().toLocaleString('zh-CN'), '地址：长沙中南汽配城2C栋东头1098-1099号  电话：18900738916']
   );
