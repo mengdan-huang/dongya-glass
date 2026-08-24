@@ -2186,6 +2186,7 @@ function renderStats(){
         '<div class="si-action"><button onclick="markCustomerPaid(\'' + esc(cust).replace(/'/g,"\\'") + '\')">标记已收款</button></div>' +
       '</div>';
     });
+    html += '<div style="margin-top:8px"><button class="btn-csv" style="width:100%;padding:10px;border:none;border-radius:8px;background:var(--success);color:#fff;font-size:13px;font-weight:600;cursor:pointer" onclick="exportMonthlyBilling()">📤 导出月结对账单(Excel)</button></div>';
   }
 
   // 客户排行（本月）
@@ -2294,6 +2295,85 @@ function exportCSV(){
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast('CSV已导出 ✓');
+}
+
+/* ========== 月结对账单导出 ========== */
+function exportMonthlyBilling(){
+  if(!statMonth){ showToast('请先选择月份'); return; }
+  var allItems = getAllItems();
+  var monthItems = allItems.filter(function(it){ return it.date && it.date.substring(0,7) === statMonth; });
+  // 筛选月结未付款
+  var unpaidItems = monthItems.filter(function(it){ return it.isMonthly && !it.isPaid; });
+  if(unpaidItems.length === 0){ showToast('本月无月结未付款记录'); return; }
+
+  // 按客户分组
+  var byCustomer = {};
+  unpaidItems.forEach(function(it){
+    if(!byCustomer[it.customer]) byCustomer[it.customer] = [];
+    byCustomer[it.customer].push(it);
+  });
+
+  var parts = statMonth.split('-');
+  var rows = [];
+  // 标题行
+  rows.push(['东亚汽车玻璃 · 月结对账单']);
+  rows.push([parts[0] + '年' + parseInt(parts[1]) + '月  未收款明细']);
+  rows.push([]);
+  // 表头
+  rows.push(['客户名称','日期','车牌号码','货品名称','售出方式','品牌型号','数量','金额(元)','备注']);
+  var grandTotal = 0;
+  var customerNames = Object.keys(byCustomer).sort();
+  customerNames.forEach(function(cust){
+    var items = byCustomer[cust];
+    var custTotal = 0;
+    items.forEach(function(it){
+      var amt = (it.amount === null || it.amount === undefined) ? 0 : it.amount;
+      custTotal += amt;
+      rows.push([
+        cust,
+        it.date || '',
+        it.plate || '',
+        it.product || '',
+        it.saleType || '',
+        it.brand || '',
+        it.quantity || 1,
+        (it.amount === null || it.amount === undefined) ? '待定' : it.amount,
+        '未付款'
+      ]);
+    });
+    // 客户小计行
+    rows.push(['', '', '', '', '', '', '小计', custTotal, '']);
+    grandTotal += custTotal;
+    rows.push([]); // 空行分隔
+  });
+  // 总计行
+  rows.push([]);
+  rows.push(['', '', '', '', '', '', '合计', grandTotal, '']);
+  rows.push([]);
+  rows.push(['导出时间：' + new Date().toLocaleString('zh-CN')]);
+  rows.push(['地址：长沙中南汽配城2C栋东头1098-1099号  电话：18900738916']);
+
+  // 生成CSV
+  var csv = '\uFEFF' + rows.map(function(row){
+    return row.map(function(cell){
+      var s = String(cell);
+      if(s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1){
+        s = '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }).join(',');
+  }).join('\n');
+
+  var blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '月结对账单_' + statMonth + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('月结对账单已导出 ✓');
 }
 
 /* ========== 月度报表（打印） ========== */
