@@ -2262,7 +2262,7 @@ function renderStats(){
     '<button class="btn-csv" onclick="exportCSV()">📄 导出销售记录(Excel)</button>' +
     '<button class="btn-print" onclick="exportMonthlyReport()">🖨️ 月度报表</button>' +
   '</div>';
-  html += '<div class="backup-tip">导出后可一键复制表格，打开WPS直接粘贴；也可下载Excel文件。</div>';
+  html += '<div class="backup-tip">导出后可一键复制表格，打开WPS直接粘贴；也可下载Excel文件。月结对账单每个月结客户一张独立表。</div>';
 
   container.innerHTML = html;
 }
@@ -2307,39 +2307,49 @@ function exportCSV(){
   showExportModal(
     '东亚玻璃销售记录_' + d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2) + '.xls',
     '东亚汽车玻璃 · 销售记录',
-    headers, dataRows,
+    [{name: '销售记录', title: '东亚汽车玻璃 · 销售记录', headers: headers, rows: dataRows}],
     ['导出时间：' + d.toLocaleString('zh-CN')]
   );
 }
 
 /* ========== 导出弹窗：预览 + 复制表格（粘贴到WPS）+ 下载 + 分享 ========== */
 var currentExport = null;
-function showExportModal(filename, title, headers, dataRows, footerLines){
+/* sheets: [{name:工作表名, title:表内标题, headers:[], rows:[]}]，每个客户一张表 */
+function showExportModal(filename, mainTitle, sheets, footerLines){
   function cellVal(c){ return (c && c.__style) ? c.v : c; }
   function cellStyle(c){ return (c && c.__style) ? c.__style : ''; }
-  // 1. Excel文件内容
-  var xlsHtml = buildXlsHtml(title, headers, dataRows, {footer: footerLines});
-  // 2. 复制用TSV文本（制表符分隔，粘贴到WPS自动分列）
-  var tsvLines = [headers.join('\t')];
-  dataRows.forEach(function(r){
-    tsvLines.push(r.map(function(c){ return String(cellVal(c)); }).join('\t'));
+  // 1. Excel文件内容（多工作表：每个客户一张表）
+  var xlsHtml = buildXlsHtmlMulti(sheets, footerLines);
+  // 2. 复制用TSV文本（制表符分隔，粘贴到WPS自动分列；各客户之间空行分隔）
+  var tsvLines = [];
+  sheets.forEach(function(sh){
+    tsvLines.push('【' + (sh.title || sh.name) + '】');
+    tsvLines.push(sh.headers.join('\t'));
+    sh.rows.forEach(function(r){
+      tsvLines.push(r.map(function(c){ return String(cellVal(c)); }).join('\t'));
+    });
+    tsvLines.push('');
   });
   (footerLines || []).forEach(function(l){ tsvLines.push(l); });
   var tsv = tsvLines.join('\n');
   currentExport = {filename: filename, xlsHtml: xlsHtml, tsv: tsv};
 
-  document.getElementById('exportTitle').textContent = '📤 ' + title;
-  // 3. 预览表格
-  var pv = '<table style="border-collapse:collapse;font-size:11px;white-space:nowrap">';
-  pv += '<tr>' + headers.map(function(h){
-    return '<th style="border:1px solid #ccc;background:#e3f2fd;padding:3px 5px;white-space:nowrap">' + esc(h) + '</th>';
-  }).join('') + '</tr>';
-  dataRows.forEach(function(r){
-    pv += '<tr>' + r.map(function(c){
-      return '<td style="border:1px solid #ddd;padding:3px 5px;' + cellStyle(c) + '">' + esc(cellVal(c)) + '</td>';
+  document.getElementById('exportTitle').textContent = '📤 ' + mainTitle;
+  // 3. 预览表格（按客户分块显示）
+  var pv = '';
+  sheets.forEach(function(sh){
+    pv += '<div style="font-size:12px;font-weight:700;color:#1976D2;margin:10px 0 3px;padding:3px 6px;background:#e3f2fd;border-radius:4px">📑 ' + esc(sh.title || sh.name) + '</div>';
+    pv += '<table style="border-collapse:collapse;font-size:11px;white-space:nowrap">';
+    pv += '<tr>' + sh.headers.map(function(h){
+      return '<th style="border:1px solid #ccc;background:#e3f2fd;padding:3px 5px;white-space:nowrap">' + esc(h) + '</th>';
     }).join('') + '</tr>';
+    sh.rows.forEach(function(r){
+      pv += '<tr>' + r.map(function(c){
+        return '<td style="border:1px solid #ddd;padding:3px 5px;' + cellStyle(c) + '">' + esc(cellVal(c)) + '</td>';
+      }).join('') + '</tr>';
+    });
+    pv += '</table>';
   });
-  pv += '</table>';
   if(footerLines && footerLines.length){
     pv += footerLines.map(function(l){
       return '<div style="font-size:10px;color:#999;padding:2px 4px">' + esc(l) + '</div>';
@@ -2406,47 +2416,62 @@ function shareExportFile(){
     navigator.share({files:[f], title: currentExport.filename}).catch(function(){});
   }catch(e){ showToast('当前浏览器不支持分享，请用「复制表格」'); }
 }
-/* 把二维数组转成 Excel 可直接打开的 HTML 表格(.xls) */
-function buildXlsHtml(title, headers, dataRows, opts){
-  opts = opts || {};
+/* 把多个二维数组转成 Excel 可直接打开的多工作表 HTML(.xls)，每个客户一张表 */
+function buildXlsHtmlMulti(sheets, footerLines){
   function escX(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">' +
-    '<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>' +
-    '<x:Name>对账单</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>' +
-    '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
-  if(title){
-    html += '<table border="0"><tr><td colspan="' + headers.length + '" style="font-size:16px;font-weight:bold;text-align:center">' + escX(title) + '</td></tr></table>';
+  // Excel工作表名限制：≤31字符，不能含 \ / ? * [ ] :
+  function sheetNameSafe(n){
+    var s = String(n || '').replace(/[\\\/\?\*\[\]:]/g, ' ').substring(0, 31).trim();
+    return s || 'Sheet';
   }
-  html += '<table border="1" cellspacing="0">';
-  if(headers){
-    html += '<tr>' + headers.map(function(h){
+  // 每个工作表在XML中声明，Excel打开时按名字生成多张Sheet
+  var xmlSheets = sheets.map(function(sh){
+    return '<x:ExcelWorksheet><x:Name>' + escX(sheetNameSafe(sh.name)) + '</x:Name>' +
+      '<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>';
+  }).join('');
+  var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">' +
+    '<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>' +
+    xmlSheets +
+    '</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
+  sheets.forEach(function(sh, si){
+    if(sh.title){
+      html += '<table border="0"><tr><td colspan="' + sh.headers.length + '" style="font-size:15px;font-weight:bold;text-align:center">' + escX(sh.title) + '</td></tr></table>';
+    }
+    html += '<table border="1" cellspacing="0">';
+    html += '<tr>' + sh.headers.map(function(h){
       return '<td style="background:#1976D2;color:#fff;font-weight:bold;text-align:center;padding:4px 8px">' + escX(h) + '</td>';
     }).join('') + '</tr>';
-  }
-  dataRows.forEach(function(r){
-    html += '<tr>' + r.map(function(c){
-      var style = 'padding:3px 8px;';
-      if(c && c.__style) { style += c.__style; c = c.v; }
-      var isNum = typeof c === 'number';
-      if(isNum) style += 'mso-number-format:\'0.00\';text-align:right;';
-      return '<td style="' + style + '">' + escX(c) + '</td>';
-    }).join('') + '</tr>';
-  });
-  if(opts.footer){
-    opts.footer.forEach(function(line){
-      html += '<tr><td colspan="' + headers.length + '" style="padding:2px 8px;color:#666">' + escX(line) + '</td></tr>';
+    sh.rows.forEach(function(r){
+      html += '<tr>' + r.map(function(c){
+        var style = 'padding:3px 8px;';
+        if(c && c.__style) { style += c.__style; c = c.v; }
+        var isNum = typeof c === 'number';
+        if(isNum) style += 'mso-number-format:\'0.00\';text-align:right;';
+        return '<td style="' + style + '">' + escX(c) + '</td>';
+      }).join('') + '</tr>';
     });
-  }
-  html += '</table></body></html>';
+    // 页脚只放在最后一张表
+    if(si === sheets.length - 1 && footerLines && footerLines.length){
+      footerLines.forEach(function(line){
+        html += '<tr><td colspan="' + sh.headers.length + '" style="padding:2px 8px;color:#666">' + escX(line) + '</td></tr>';
+      });
+    }
+    html += '</table>';
+    // 工作表分隔符：分页符使Excel将后续内容放入下一张Sheet
+    if(si < sheets.length - 1){
+      html += '<br style="mso-special-character:line-break;page-break-before:always">';
+    }
+  });
+  html += '</body></html>';
   return html;
 }
 
-/* ========== 月结对账单导出：各月结客户当月全部销售记录 ========== */
+/* ========== 月结对账单导出：只导月结客户，每个客户一张独立表格 ========== */
 function exportMonthlyBilling(){
   if(!statMonth){ showToast('请先选择月份'); return; }
   var allItems = getAllItems();
   var monthItems = allItems.filter(function(it){ return it.date && it.date.substring(0,7) === statMonth; });
-  // 筛选当月所有月结客户的记录（含已付/未付）
+  // 只筛选月结客户的记录（含已付/未付）
   var monthlyItems = monthItems.filter(function(it){ return it.isMonthly; });
   if(monthlyItems.length === 0){ showToast('本月无月结客户记录'); return; }
 
@@ -2458,14 +2483,55 @@ function exportMonthlyBilling(){
   });
 
   var parts = statMonth.split('-');
-  var grandTotal = 0, grandUnpaid = 0;
+  var monthLabel = parts[0] + '年' + parseInt(parts[1]) + '月';
   var customerNames = Object.keys(byCustomer).sort();
+  var grandTotal = 0, grandUnpaid = 0;
 
-  var headers = ['客户名称','日期','车牌号码','货品名称','售出方式','品牌型号','数量','金额(元)','付款状态'];
-  var dataRows = [];
+  // Sheet 1：各客户汇总表
+  var sumHeaders = ['客户名称', '笔数', '销售合计(元)', '未收金额(元)', '结清状态'];
+  var sumRows = [];
   customerNames.forEach(function(cust){
     var items = byCustomer[cust];
     var custTotal = 0, custUnpaid = 0;
+    items.forEach(function(it){
+      var amt = (it.amount === null || it.amount === undefined) ? 0 : it.amount;
+      custTotal += amt;
+      if(!it.isPaid) custUnpaid += amt;
+    });
+    sumRows.push([
+      cust,
+      items.length,
+      custTotal,
+      custUnpaid,
+      custUnpaid > 0 ? {v:'未结清', __style:'color:#d32f2f;font-weight:bold;'} : {v:'已结清', __style:'color:#2e7d32;font-weight:bold;'}
+    ]);
+    grandTotal += custTotal;
+    grandUnpaid += custUnpaid;
+  });
+  sumRows.push([
+    {v:'总计', __style:'font-weight:bold;font-size:13px;color:#d32f2f;'},
+    {v:monthlyItems.length, __style:'font-weight:bold;color:#d32f2f;'},
+    {v:grandTotal, __style:'font-weight:bold;font-size:13px;color:#d32f2f;'},
+    {v:grandUnpaid, __style:'font-weight:bold;color:#d32f2f;'},
+    ''
+  ]);
+
+  var sheets = [{
+    name: '汇总',
+    title: '东亚汽车玻璃 · 月结客户汇总（' + monthLabel + '）',
+    headers: sumHeaders,
+    rows: sumRows
+  }];
+
+  // 每个客户一张独立Sheet：当月全部销售明细 + 小计
+  var detailHeaders = ['日期', '车牌号码', '货品名称', '售出方式', '品牌型号', '数量', '金额(元)', '付款状态'];
+  customerNames.forEach(function(cust){
+    var items = byCustomer[cust].slice().sort(function(a, b){
+      if(a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.createdAt - b.createdAt;
+    });
+    var custTotal = 0, custUnpaid = 0;
+    var rows = [];
     items.forEach(function(it){
       var amt = (it.amount === null || it.amount === undefined) ? 0 : it.amount;
       custTotal += amt;
@@ -2476,8 +2542,7 @@ function exportMonthlyBilling(){
       } else {
         statusCell = {v:'未付款', __style:'color:#d32f2f;font-weight:bold;'};
       }
-      dataRows.push([
-        cust,
+      rows.push([
         it.date || '',
         it.plate || '',
         it.product || '',
@@ -2488,31 +2553,27 @@ function exportMonthlyBilling(){
         statusCell
       ]);
     });
-    // 客户小计行（销售合计 + 其中未收）
-    dataRows.push([
-      {v:cust + ' 小计', __style:'font-weight:bold;color:#1976D2;'},
-      '', '', '', '', '',
+    // 客户小计行
+    rows.push([
+      {v:'小计', __style:'font-weight:bold;color:#1976D2;'},
+      '', '', '', '',
       {v:'共' + items.length + '笔', __style:'font-weight:bold;color:#1976D2;'},
       {v:custTotal, __style:'font-weight:bold;color:#1976D2;'},
       {v:custUnpaid > 0 ? '未收:' + custUnpaid : '已结清', __style:'font-weight:bold;color:' + (custUnpaid > 0 ? '#d32f2f' : '#2e7d32') + ';'}
     ]);
-    grandTotal += custTotal;
-    grandUnpaid += custUnpaid;
+    sheets.push({
+      name: cust,
+      title: cust + ' · ' + monthLabel + ' 对账单',
+      headers: detailHeaders,
+      rows: rows
+    });
   });
-  // 总计行（加粗标红）
-  dataRows.push([
-    {v:'总计', __style:'font-weight:bold;font-size:14px;color:#d32f2f;'},
-    '', '', '', '', '',
-    {v:'合计', __style:'font-weight:bold;color:#d32f2f;'},
-    {v:grandTotal, __style:'font-weight:bold;font-size:14px;color:#d32f2f;'},
-    {v:'未收:' + grandUnpaid, __style:'font-weight:bold;color:#d32f2f;'}
-  ]);
 
   showExportModal(
     '月结对账单_' + statMonth + '.xls',
-    '东亚汽车玻璃 · 月结对账单（' + parts[0] + '年' + parseInt(parts[1]) + '月）',
-    headers, dataRows,
-    ['导出时间：' + new Date().toLocaleString('zh-CN'), '地址：长沙中南汽配城2C栋东头1098-1099号  电话：18900738916']
+    '月结对账单（' + monthLabel + '）· 每个客户一张表',
+    sheets,
+    ['地址：长沙中南汽配城2C栋东头1098-1099号  电话：18900738916', '导出时间：' + new Date().toLocaleString('zh-CN')]
   );
 }
 
