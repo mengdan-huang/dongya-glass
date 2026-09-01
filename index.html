@@ -1949,10 +1949,14 @@ function renderReminders(){
 
     var detailHtml = '';
     if(rem.type === 'monthly' && rem.months){
-      // 月结客户：按月分组显示
+      // 月结客户：按月分组显示，每个月份可单独标记已付款
+      var custJs = esc(rem.customer).replace(/'/g, "\\'").replace(/"/g, '&quot;');
       rem.months.forEach(function(mg){
         detailHtml += '<div class="month-group">' +
-          '<div class="month-group-header">' + mg.month + ' <span class="month-group-count">' + mg.count + '笔</span> <span class="month-group-amt">' + formatMoney(mg.amount) + '元</span></div>';
+          '<div class="month-group-header" style="display:flex;align-items:center;justify-content:space-between">' +
+            '<span>' + mg.month + ' <span class="month-group-count">' + mg.count + '笔</span> <span class="month-group-amt">' + formatMoney(mg.amount) + '元</span></span>' +
+            '<button style="border:none;background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;cursor:pointer" onclick="markCustomerMonthPaid(\'' + custJs + '\',\'' + mg.month + '\')">✓ 本月已付</button>' +
+          '</div>';
         mg.items.forEach(function(it){
           var mPending = (it.amount === null || it.amount === undefined) ? ' style="color:#e6a000"' : '';
           detailHtml += '<div class="month-group-item"' + mPending + '>' +
@@ -2008,6 +2012,27 @@ function markCustomerPaid(customer){
     });
     saveData();
     showToast('已标记收款 ✓');
+    updateAll();
+  });
+}
+
+/* 月结客户：只标记某个月份的全部未付款项 */
+function markCustomerMonthPaid(customer, month){
+  var parts = month.split('-');
+  var monthLabel = parts[0] + '年' + parseInt(parts[1]) + '月';
+  showModal('确认收款', '将 ' + customer + ' ' + monthLabel + ' 的未付款项全部标记为已付款？', function(){
+    var n = 0;
+    records.forEach(function(r){
+      if(r.customer === customer && r.plates && r.date && r.date.substring(0,7) === month){
+        r.plates.forEach(function(pg){
+          pg.items.forEach(function(item){
+            if(!item.isPaid){ item.isPaid = true; n++; }
+          });
+        });
+      }
+    });
+    saveData();
+    showToast('已标记 ' + monthLabel + ' ' + n + ' 笔收款 ✓');
     updateAll();
   });
 }
