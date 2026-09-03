@@ -179,7 +179,6 @@ input[type="date"]{font-family:inherit}
 .day-table .row-monthly-unpaid td{color:var(--blue)}
 .day-table .row-unpaid td{color:var(--red)}
 .day-table .row-pending td{color:#e6a000}
-.day-table tr.order-start td{border-top:2px solid #90caf9}
 .day-table .act-btns{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}
 .day-table .act-btns button{font-size:10px;padding:3px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;white-space:nowrap}
 .day-table .act-btns button.success{color:var(--success);border-color:var(--success)}
@@ -1469,7 +1468,8 @@ function renderRecords(){
       groupOrders.forEach(function(r){
         orderSeq++;
         var isFirstOrder = orderSeq === 1;
-        var orderLabel = multiOrder ? '<div class="sub" style="color:#1976D2;font-weight:600;margin-top:1px">第' + orderNoById[r.id] + '单</div>' : '';
+        var circled = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
+        var orderLabel = multiOrder ? '<div class="sub" style="color:#1976D2;margin-top:1px">' + (circled[orderNoById[r.id] - 1] || ('(' + orderNoById[r.id] + ')')) + '</div>' : '';
         var itemRows = [];
       r.plates.forEach(function(pg){
         pg.items.forEach(function(item){
@@ -1499,9 +1499,8 @@ function renderRecords(){
         var customerCell = idx === 0 ? ((isFirstOrder ? esc(cust) : '') + orderLabel) : '';
         var showActions = idx === itemRows.length - 1; // 最后一行显示整单操作
         var pendingClass = (item.amount === null || item.amount === undefined) ? ' row-pending' : '';
-        var sepClass = (idx === 0 && !isFirstOrder) ? ' order-start' : ''; // 同客户新单之间的分隔线
 
-        html += '<tr class="' + rowClass + pendingClass + sepClass + '">' +
+        html += '<tr class="' + rowClass + pendingClass + '">' +
           '<td>' + (customerCell || '') + (idx === 0 && r.isMonthly ? '<span class="day-dot blue" style="margin-left:2px"></span>' : '') + '</td>' +
           '<td>' + (row.plate ? esc(row.plate) : '<span style="color:#ccc">—</span>') + '</td>' +
           '<td>' + esc(item.product) + (item.brand ? '<span class="sub">' + esc(item.brand) + '</span>' : '') + '</td>' +
