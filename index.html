@@ -255,12 +255,17 @@ input[type="date"]{font-family:inherit}
 .btn-mark-paid:disabled{opacity:.4}
 .reminder-date{font-size:12px;color:var(--text-3);margin-top:4px}
 
-/* 月结按月分组 */
+/* 月结按月分组（可点击展开/收起） */
 .month-group{margin-top:6px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .month-group-header{background:var(--primary-light);padding:6px 10px;font-size:13px;font-weight:600;color:var(--primary-dark);display:flex;align-items:center;gap:6px}
 .month-group-header .month-group-count{font-size:11px;font-weight:400;opacity:.8}
 .month-group-header .month-group-amt{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
 .month-group-item{font-size:12px;color:var(--text-2);padding:4px 10px;border-top:1px solid var(--border)}
+.mg-toggle{display:flex;align-items:center;gap:5px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mg-arrow{display:inline-block;font-size:10px;transition:transform .2s;color:var(--primary)}
+.month-group.open .mg-arrow{transform:rotate(90deg)}
+.month-group-body{display:none}
+.month-group.open .month-group-body{display:block}
 
 .reminder-banner{background:var(--warning-light);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--warning);margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:500}
 
@@ -1954,15 +1959,20 @@ function renderReminders(){
       rem.months.forEach(function(mg){
         detailHtml += '<div class="month-group">' +
           '<div class="month-group-header" style="display:flex;align-items:center;justify-content:space-between">' +
-            '<span>' + mg.month + ' <span class="month-group-count">' + mg.count + '笔</span> <span class="month-group-amt">' + formatMoney(mg.amount) + '元</span></span>' +
+            '<span class="mg-toggle" onclick="toggleMonthGroup(this)">' +
+              '<span class="mg-arrow">▶</span>' + mg.month +
+              ' <span class="month-group-count">' + mg.count + '笔</span>' +
+              ' <span class="month-group-amt">' + formatMoney(mg.amount) + '元</span>' +
+            '</span>' +
             '<button style="border:none;background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;cursor:pointer" onclick="markCustomerMonthPaid(\'' + custJs + '\',\'' + mg.month + '\')">✓ 本月已付</button>' +
-          '</div>';
+          '</div>' +
+          '<div class="month-group-body">';
         mg.items.forEach(function(it){
           var mPending = (it.amount === null || it.amount === undefined) ? ' style="color:#e6a000"' : '';
           detailHtml += '<div class="month-group-item"' + mPending + '>' +
             it.date.substring(8) + '日 ' + esc(it.product) + (it.brand ? ' · ' + esc(it.brand) : '') + (it.plate ? ' · [' + esc(it.plate) + ']' : '') + ' · ' + (it.amount === null || it.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(it.amount) + '元') + '</div>';
         });
-        detailHtml += '</div>';
+        detailHtml += '</div></div>';
       });
     } else {
       // 非月结客户：平铺显示
@@ -2014,6 +2024,13 @@ function markCustomerPaid(customer){
     showToast('已标记收款 ✓');
     updateAll();
   });
+}
+
+/* 月结提醒：月份分组展开/收起 */
+function toggleMonthGroup(el){
+  var group = el.closest('.month-group');
+  if(!group) return;
+  group.classList.toggle('open');
 }
 
 /* 月结客户：只标记某个月份的全部未付款项 */
