@@ -840,30 +840,7 @@ function findRecord(recordId){
   return null;
 }
 
-function findRecordByDateCustomer(date, customer){
-  for(var i=0;i<records.length;i++){
-    if(records[i].date === date && records[i].customer === customer) return records[i];
-  }
-  return null;
-}
-
-/* 将 plates 合并到已有 record 中，相同车牌号自动合并 */
-function mergePlatesIntoRecord(targetRecord, newPlates){
-  newPlates.forEach(function(np){
-    var existingPG = null;
-    for(var i=0;i<targetRecord.plates.length;i++){
-      if(targetRecord.plates[i].plate === np.plate){
-        existingPG = targetRecord.plates[i];
-        break;
-      }
-    }
-    if(existingPG){
-      existingPG.items = existingPG.items.concat(np.items);
-    } else {
-      targetRecord.plates.push(np);
-    }
-  });
-}
+/* 注意：同客户同日的多条记录不再自动合并，每条记录都是独立的销售单 */
 
 function findItem(recordId, itemId){
   var r = findRecord(recordId);
@@ -1076,22 +1053,7 @@ function addRecord(){
 
   if(!hasValidItem){ showToast('请至少录入一条货品（含名称）'); return; }
 
-  // 检查同一天同一客户是否已有记录，有则自动合并
-  var existing = findRecordByDateCustomer(date, customer);
-  if(existing){
-    // 月结属性：任一为月结则为月结
-    if(formState.monthly) existing.isMonthly = true;
-    mergePlatesIntoRecord(existing, plates);
-    saveData();
-    var mergedCount = recordItemCount(existing);
-    // 清空表单（保留日期和月结设置）
-    document.getElementById('entryCustomer').value = '';
-    initEntryForm();
-    showToast('已合并到 ' + customer + ' 当日记录 ✓ 共 ' + mergedCount + ' 件货品');
-    updateAll();
-    return;
-  }
-
+  // 同客户同日不再自动合并，每次录入都是独立的销售单
   var record = {
     id: genId(),
     date: date,
@@ -1103,11 +1065,17 @@ function addRecord(){
   records.push(record);
   saveData();
 
+  // 统计当日该客户已有几单
+  var orderNo = 1;
+  records.forEach(function(x){
+    if(x.id !== record.id && x.date === date && x.customer === customer) orderNo++;
+  });
+
   // 清空表单（保留日期和月结设置）
   document.getElementById('entryCustomer').value = '';
   initEntryForm();
 
-  showToast('录入成功 ✓ 共 ' + recordItemCount(record) + ' 件货品');
+  showToast('录入成功 ✓ ' + customer + ' 当日第' + orderNo + '单 · 共 ' + recordItemCount(record) + ' 件货品');
   updateAll();
 }
 
@@ -1342,21 +1310,15 @@ function confirmImport(date, isMonthly){
       plates.push({ plate: pk, items: plateItems });
     });
 
-    // 检查同一天同一客户是否已有记录，有则自动合并
-    var existing = findRecordByDateCustomer(date, cust);
-    if(existing){
-      if(isMonthly) existing.isMonthly = true;
-      mergePlatesIntoRecord(existing, plates);
-    } else {
-      records.push({
-        id: genId(),
-        date: date,
-        customer: cust,
-        isMonthly: isMonthly,
-        createdAt: Date.now() + imported,
-        plates: plates
-      });
-    }
+    // 同客户同日不再合并进已有记录，本次导入生成独立的新销售单
+    records.push({
+      id: genId(),
+      date: date,
+      customer: cust,
+      isMonthly: isMonthly,
+      createdAt: Date.now() + imported,
+      plates: plates
+    });
     imported += items.length;
   });
 
@@ -1486,7 +1448,17 @@ function renderRecords(){
       '<th class="center">操作</th>' +
     '</tr></thead><tbody>';
 
+    // 统计当日每个客户的单数，多单时显示单号以区分不同销售单
+    var custOrderCount = {};
     dayList.forEach(function(r){
+      custOrderCount[r.customer] = (custOrderCount[r.customer] || 0) + 1;
+    });
+    var custOrderNo = {};
+
+    dayList.forEach(function(r){
+      custOrderNo[r.customer] = (custOrderNo[r.customer] || 0) + 1;
+      var multiOrder = custOrderCount[r.customer] > 1;
+      var orderLabel = multiOrder ? ' · 第' + custOrderNo[r.customer] + '单' : '';
       var itemRows = [];
       r.plates.forEach(function(pg){
         pg.items.forEach(function(item){
@@ -1513,7 +1485,7 @@ function renderRecords(){
         }
 
         var paidBtnText = item.isPaid ? '撤付' : '付款';
-        var customerCell = idx === 0 ? esc(r.customer) : '';
+        var customerCell = idx === 0 ? esc(r.customer) + '<span class="sub" style="color:#1976D2;font-weight:600">' + orderLabel + '</span>' : '';
         var showActions = idx === itemRows.length - 1; // 最后一行显示整单操作
         var pendingClass = (item.amount === null || item.amount === undefined) ? ' row-pending' : '';
 
@@ -1703,29 +1675,11 @@ function saveEditRecord(){
 
   if(!hasValidItem){ showToast('请至少保留一条有效货品'); return; }
 
-  // 更新记录
+  // 更新记录（同客户同日不再自动合并，保持独立销售单）
   r.date = date;
   r.customer = customer;
   r.isMonthly = isMonthly;
   r.plates = plates;
-
-  // 如果日期或客户变了，可能需要重新合并到同日同客户记录
-  var existing = null;
-  for(var i=0;i<records.length;i++){
-    if(records[i].id !== r.id && records[i].date === date && records[i].customer === customer){
-      existing = records[i];
-      break;
-    }
-  }
-  if(existing){
-    mergePlatesIntoRecord(existing, plates);
-    records = records.filter(function(x){ return x.id !== r.id; });
-    saveData();
-    closeEditRecord();
-    showToast('已保存并合并到同日同客户记录 ✓');
-    updateAll();
-    return;
-  }
 
   saveData();
   closeEditRecord();
