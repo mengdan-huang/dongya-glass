@@ -179,6 +179,7 @@ input[type="date"]{font-family:inherit}
 .day-table .row-monthly-unpaid td{color:var(--blue)}
 .day-table .row-unpaid td{color:var(--red)}
 .day-table .row-pending td{color:#e6a000}
+.day-table tr.order-start td{border-top:2px solid #90caf9}
 .day-table .act-btns{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}
 .day-table .act-btns button{font-size:10px;padding:3px 6px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;white-space:nowrap}
 .day-table .act-btns button.success{color:var(--success);border-color:var(--success)}
@@ -1448,18 +1449,28 @@ function renderRecords(){
       '<th class="center">操作</th>' +
     '</tr></thead><tbody>';
 
-    // 统计当日每个客户的单数，多单时显示单号以区分不同销售单
-    var custOrderCount = {};
+    // 同日同客户的多张单归到一起显示：客户名只显示一次，但每张单保持独立（各自的编辑/删单按钮）
+    var custGroups = {};
+    var custGroupOrder = [];
     dayList.forEach(function(r){
-      custOrderCount[r.customer] = (custOrderCount[r.customer] || 0) + 1;
+      if(!custGroups[r.customer]){ custGroups[r.customer] = []; custGroupOrder.push(r.customer); }
+      custGroups[r.customer].push(r);
     });
-    var custOrderNo = {};
 
-    dayList.forEach(function(r){
-      custOrderNo[r.customer] = (custOrderNo[r.customer] || 0) + 1;
-      var multiOrder = custOrderCount[r.customer] > 1;
-      var orderLabel = multiOrder ? ' · 第' + custOrderNo[r.customer] + '单' : '';
-      var itemRows = [];
+    custGroupOrder.forEach(function(cust){
+      var groupOrders = custGroups[cust];
+      // 按创建时间升序给各单编号（第1单 = 当天最早录入的）
+      var orderNoById = {};
+      groupOrders.slice().sort(function(a,b){ return a.createdAt - b.createdAt; })
+        .forEach(function(r, i){ orderNoById[r.id] = i + 1; });
+      var multiOrder = groupOrders.length > 1;
+      var orderSeq = 0;
+
+      groupOrders.forEach(function(r){
+        orderSeq++;
+        var isFirstOrder = orderSeq === 1;
+        var orderLabel = multiOrder ? '<div class="sub" style="color:#1976D2;font-weight:600;margin-top:1px">第' + orderNoById[r.id] + '单</div>' : '';
+        var itemRows = [];
       r.plates.forEach(function(pg){
         pg.items.forEach(function(item){
           itemRows.push({ plate: pg.plate, item: item });
@@ -1485,11 +1496,12 @@ function renderRecords(){
         }
 
         var paidBtnText = item.isPaid ? '撤付' : '付款';
-        var customerCell = idx === 0 ? esc(r.customer) + '<span class="sub" style="color:#1976D2;font-weight:600">' + orderLabel + '</span>' : '';
+        var customerCell = idx === 0 ? ((isFirstOrder ? esc(cust) : '') + orderLabel) : '';
         var showActions = idx === itemRows.length - 1; // 最后一行显示整单操作
         var pendingClass = (item.amount === null || item.amount === undefined) ? ' row-pending' : '';
+        var sepClass = (idx === 0 && !isFirstOrder) ? ' order-start' : ''; // 同客户新单之间的分隔线
 
-        html += '<tr class="' + rowClass + pendingClass + '">' +
+        html += '<tr class="' + rowClass + pendingClass + sepClass + '">' +
           '<td>' + (customerCell || '') + (idx === 0 && r.isMonthly ? '<span class="day-dot blue" style="margin-left:2px"></span>' : '') + '</td>' +
           '<td>' + (row.plate ? esc(row.plate) : '<span style="color:#ccc">—</span>') + '</td>' +
           '<td>' + esc(item.product) + (item.brand ? '<span class="sub">' + esc(item.brand) + '</span>' : '') + '</td>' +
@@ -1502,6 +1514,7 @@ function renderRecords(){
             (showActions ? '<button class="edit" onclick="openEditRecord(\'' + r.id + '\')">编辑</button><button class="danger" onclick="deleteRecord(\'' + r.id + '\')">删单</button>' : '') +
           '</div></td>' +
         '</tr>';
+      });
       });
     });
 
