@@ -1053,29 +1053,32 @@ function addRecord(){
 
   if(!hasValidItem){ showToast('请至少录入一条货品（含名称）'); return; }
 
-  // 同客户同日不再自动合并，每次录入都是独立的销售单
-  var record = {
-    id: genId(),
-    date: date,
-    customer: customer,
-    isMonthly: formState.monthly,
-    createdAt: Date.now(),
-    plates: plates
-  };
-  records.push(record);
+  // 按 plate 区分销售单：每次录入的每个 plate 项（不同车牌或不同留空）都是一张独立的销售单，不跨保存合并
+  plates.forEach(function(p, idx){
+    records.push({
+      id: genId(),
+      date: date,
+      customer: customer,
+      isMonthly: formState.monthly,
+      createdAt: Date.now() + idx,
+      plates: [p]
+    });
+  });
+
   saveData();
 
   // 统计当日该客户已有几单
-  var orderNo = 1;
+  var orderNo = 0;
   records.forEach(function(x){
-    if(x.id !== record.id && x.date === date && x.customer === customer) orderNo++;
+    if(x.date === date && x.customer === customer) orderNo++;
   });
 
   // 清空表单（保留日期和月结设置）
   document.getElementById('entryCustomer').value = '';
   initEntryForm();
 
-  showToast('录入成功 ✓ ' + customer + ' 当日第' + orderNo + '单 · 共 ' + recordItemCount(record) + ' 件货品');
+  var itemCount = plates.reduce(function(s,p){return s + p.items.length}, 0);
+  showToast('录入成功 ✓ ' + customer + ' · 新增' + plates.length + '单 / ' + itemCount + '件货品 · 当日共' + orderNo + '单');
   updateAll();
 }
 
@@ -1268,62 +1271,48 @@ function confirmImport(date, isMonthly){
     return;
   }
 
-  // 按客户名称分组，同客户的记录合并为一条多车牌单
-  var customerGroups = {};
-  var customerOrder = [];
+  // 按 plate 区分销售单：每个 (customer, plate) 组合直接生成一张独立销售单，不跨保存合并
+  var groups = {};
+  var groupOrder = [];
   validRecords.forEach(function(r){
-    if(!customerGroups[r.customer]){
-      customerGroups[r.customer] = [];
-      customerOrder.push(r.customer);
+    var pKey = (r.plate || '').trim();
+    var k = r.customer + '\u0000' + pKey;
+    if(!groups[k]){
+      groups[k] = { customer: r.customer, plate: r.plate, items: [] };
+      groupOrder.push(k);
     }
-    customerGroups[r.customer].push(r);
+    groups[k].items.push(r);
   });
 
-  var imported = 0;
-  customerOrder.forEach(function(cust){
-    var items = customerGroups[cust];
-    // 按 plate 分组
-    var plateGroups = {};
-    var plateOrder = [];
-    items.forEach(function(r){
-      var plateKey = r.plate || '';
-      if(!plateGroups[plateKey]){
-        plateGroups[plateKey] = [];
-        plateOrder.push(plateKey);
-      }
-      plateGroups[plateKey].push(r);
+  var newCount = 0;
+  var newOrderCount = 0;
+  groupOrder.forEach(function(k){
+    var g = groups[k];
+    var items = g.items.map(function(r){
+      return {
+        id: genId(),
+        product: r.product,
+        saleType: '安装',
+        brand: r.brand || '',
+        quantity: 1,
+        amount: r.amount,
+        isPaid: r.isPaid
+      };
     });
-
-    var plates = [];
-    plateOrder.forEach(function(pk){
-      var plateItems = plateGroups[pk].map(function(r){
-        return {
-          id: genId(),
-          product: r.product,
-          saleType: '安装',
-          brand: r.brand || '',
-          quantity: 1,
-          amount: r.amount,
-          isPaid: r.isPaid
-        };
-      });
-      plates.push({ plate: pk, items: plateItems });
-    });
-
-    // 同客户同日不再合并进已有记录，本次导入生成独立的新销售单
     records.push({
       id: genId(),
       date: date,
-      customer: cust,
+      customer: g.customer,
       isMonthly: isMonthly,
-      createdAt: Date.now() + imported,
-      plates: plates
+      createdAt: Date.now() + newCount,
+      plates: [{ plate: g.plate, items: items }]
     });
-    imported += items.length;
+    newCount += items.length;
+    newOrderCount++;
   });
 
   saveData();
-  showToast('成功导入 ' + imported + ' 件货品 ✓');
+  showToast('成功导入 ✓ 新增 ' + newOrderCount + ' 单 / ' + newCount + ' 件货品');
 
   // Clear import UI
   document.getElementById('importText').value = '';
@@ -1687,7 +1676,7 @@ function saveEditRecord(){
 
   if(!hasValidItem){ showToast('请至少保留一条有效货品'); return; }
 
-  // 更新记录（同客户同日不再自动合并，保持独立销售单）
+  // 编辑后直接更新当前 record（不再跨保存合并，保持现有 plate 结构）
   r.date = date;
   r.customer = customer;
   r.isMonthly = isMonthly;
