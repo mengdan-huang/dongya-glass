@@ -450,15 +450,16 @@ input[type="date"]{font-family:inherit}
         <div class="switch" id="switchMonthly" onclick="toggleSwitch('switchMonthly','monthly')"></div>
       </div>
     </div>
-    <div class="form-group">
-      <label>备注 <span style="font-size:12px;color:var(--text-2);font-weight:400">（选填，不填不显示）</span></label>
-      <textarea class="form-input" id="entryNote" rows="2" placeholder="例如：客户要求明天上门安装、走对公账户…" style="resize:vertical;font-family:inherit"></textarea>
-    </div>
   </div>
 
   <!-- 动态车牌+货品区域 -->
   <div id="platesContainer"></div>
   <button class="btn-add-plate" onclick="addPlateGroup()">+ 添加车牌</button>
+
+  <div class="form-group" style="margin-top:14px">
+    <label>备注 <span style="font-size:12px;color:var(--text-2);font-weight:400">（选填，不填不显示）</span></label>
+    <textarea class="form-input" id="entryNote" rows="2" placeholder="例如：客户要求明天上门安装、走对公账户…" style="resize:vertical;font-family:inherit"></textarea>
+  </div>
 
   <button class="btn-submit" onclick="addRecord()">确认录入</button>
 </div>
@@ -804,7 +805,8 @@ function flattenItems(record){
         amount: item.amount,
         isPaid: item.isPaid,
         isMonthly: record.isMonthly,
-        createdAt: record.createdAt
+        createdAt: record.createdAt,
+        note: record.note || ''
       });
     });
   });
@@ -1513,7 +1515,7 @@ function renderRecords(){
 
         // 备注行：仅当单有备注且为该单最后一行时显示
         if(showActions && r.note){
-          html += '<tr class="note-row"><td colspan="8" style="background:#fffbe8;color:#8a6d3b;font-size:12px;padding:6px 10px;border-top:1px dashed #e6cf94"><span style="font-weight:600">📝 备注：</span>' + esc(r.note) + '</td></tr>';
+          html += '<tr class="note-row"><td colspan="8" style="font-size:12px;padding:6px 10px;border-bottom:1px dashed #ccc"><span style="font-weight:600">📝 备注：</span>' + esc(r.note) + '</td></tr>';
         }
       });
       });
@@ -1779,7 +1781,7 @@ function doSearch(){
     '<th class="center">状态</th>' +
     '</tr></thead><tbody>';
 
-  matched.forEach(function(it){
+  matched.forEach(function(it, idx){
     var rowClass = (it.isMonthly && !it.isPaid) ? 'row-monthly-unpaid' : (!it.isMonthly && !it.isPaid ? 'row-unpaid' : '');
     if(it.amount === null || it.amount === undefined) rowClass += ' row-pending';
     var statusBadge = '';
@@ -1799,6 +1801,12 @@ function doSearch(){
       '<td class="right"><span class="amt">' + (it.amount === null || it.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(it.amount)) + '</span></td>' +
       '<td class="center" style="white-space:nowrap">' + statusBadge + '</td>' +
     '</tr>';
+
+    // 备注行：仅当本 item 的 recordId 与下一个 item 的 recordId 不同（即该 record 的最后一行）且该 record 有备注时才显示
+    var next = matched[idx + 1];
+    if(it.note && (!next || next.recordId !== it.recordId)){
+      html += '<tr class="note-row"><td colspan="8" style="font-size:12px;padding:6px 10px;border-bottom:1px dashed #ccc"><span style="font-weight:600">📝 备注：</span>' + esc(it.note) + '</td></tr>';
+    }
   });
 
   html += '</tbody></table></div>';
