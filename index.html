@@ -450,6 +450,10 @@ input[type="date"]{font-family:inherit}
         <div class="switch" id="switchMonthly" onclick="toggleSwitch('switchMonthly','monthly')"></div>
       </div>
     </div>
+    <div class="form-group">
+      <label>备注 <span style="font-size:12px;color:var(--text-2);font-weight:400">（选填，不填不显示）</span></label>
+      <textarea class="form-input" id="entryNote" rows="2" placeholder="例如：客户要求明天上门安装、走对公账户…" style="resize:vertical;font-family:inherit"></textarea>
+    </div>
   </div>
 
   <!-- 动态车牌+货品区域 -->
@@ -1013,6 +1017,7 @@ function bindLiveSummary(){
 function addRecord(){
   var date = document.getElementById('entryDate').value;
   var customer = document.getElementById('entryCustomer').value.trim();
+  var note = document.getElementById('entryNote').value.trim();
 
   if(!date){ showToast('请选择日期'); return; }
   if(!customer){ showToast('请输入客户名称'); return; }
@@ -1055,14 +1060,16 @@ function addRecord(){
 
   // 按 plate 区分销售单：每次录入的每个 plate 项（不同车牌或不同留空）都是一张独立的销售单，不跨保存合并
   plates.forEach(function(p, idx){
-    records.push({
+    var r = {
       id: genId(),
       date: date,
       customer: customer,
       isMonthly: formState.monthly,
       createdAt: Date.now() + idx,
       plates: [p]
-    });
+    };
+    if(note) r.note = note;
+    records.push(r);
   });
 
   saveData();
@@ -1075,6 +1082,7 @@ function addRecord(){
 
   // 清空表单（保留日期和月结设置）
   document.getElementById('entryCustomer').value = '';
+  document.getElementById('entryNote').value = '';
   initEntryForm();
 
   var itemCount = plates.reduce(function(s,p){return s + p.items.length}, 0);
@@ -1502,6 +1510,11 @@ function renderRecords(){
             (showActions ? '<button class="edit" onclick="openEditRecord(\'' + r.id + '\')">编辑</button><button class="danger" onclick="deleteRecord(\'' + r.id + '\')">删单</button>' : '') +
           '</div></td>' +
         '</tr>';
+
+        // 备注行：仅当单有备注且为该单最后一行时显示
+        if(showActions && r.note){
+          html += '<tr class="note-row"><td colspan="8" style="background:#fffbe8;color:#8a6d3b;font-size:12px;padding:6px 10px;border-top:1px dashed #e6cf94"><span style="font-weight:600">📝 备注：</span>' + esc(r.note) + '</td></tr>';
+        }
       });
       });
     });
@@ -1559,6 +1572,10 @@ function openEditRecord(recordId){
           '<span class="switch-label"><span class="dot blue"></span>月结客户</span>' +
           '<div class="switch' + (r.isMonthly ? ' on' : '') + '" id="editSwitchMonthly" onclick="toggleEditSwitch()"></div>' +
         '</div>' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label>备注 <span style="font-size:12px;color:var(--text-2);font-weight:400">（选填，不填不显示）</span></label>' +
+        '<textarea class="form-input" id="editNote" rows="2" placeholder="例如：客户要求明天上门安装、走对公账户…" style="resize:vertical;font-family:inherit">' + esc(r.note||'') + '</textarea>' +
       '</div>' +
       '<div style="font-size:13px;font-weight:600;color:var(--text-2);margin:4px 0 6px">车牌与货品</div>' +
       '<div id="editPlatesContainer"></div>' +
@@ -1636,6 +1653,7 @@ function saveEditRecord(){
   var date = document.getElementById('editDate').value;
   var customer = document.getElementById('editCustomer').value.trim();
   var isMonthly = document.getElementById('editSwitchMonthly').classList.contains('on');
+  var note = document.getElementById('editNote').value.trim();
 
   if(!date){ showToast('请选择日期'); return; }
   if(!customer){ showToast('请输入客户名称'); return; }
@@ -1681,6 +1699,7 @@ function saveEditRecord(){
   r.customer = customer;
   r.isMonthly = isMonthly;
   r.plates = plates;
+  if(note) r.note = note; else delete r.note;
 
   saveData();
   closeEditRecord();
