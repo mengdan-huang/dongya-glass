@@ -184,6 +184,8 @@ input[type="date"]{font-family:inherit}
 .day-table .act-btns button.success{color:var(--success);border-color:var(--success)}
 .day-table .act-btns button.danger{color:var(--danger);border-color:var(--danger)}
 .day-table .act-btns button.edit{color:#FF9800;border-color:#FF9800}
+.day-table tr.note-row td{border-top:none;padding:2px 10px 6px;font-size:12px;color:var(--text-2);background:transparent}
+.day-table tr.note-row td .note-tag{font-weight:600;color:var(--text-3);margin-right:4px}
 .day-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px;vertical-align:middle}
 .day-dot.blue{background:var(--blue)}
 .day-dot.red{background:var(--red)}
@@ -454,12 +456,13 @@ input[type="date"]{font-family:inherit}
 
   <!-- 动态车牌+货品区域 -->
   <div id="platesContainer"></div>
-  <button class="btn-add-plate" onclick="addPlateGroup()">+ 添加车牌</button>
 
-  <div class="form-group" style="margin-top:14px">
+  <div class="form-group" style="margin:6px 0 4px">
     <label>备注 <span style="font-size:12px;color:var(--text-2);font-weight:400">（选填，不填不显示）</span></label>
     <textarea class="form-input" id="entryNote" rows="2" placeholder="例如：客户要求明天上门安装、走对公账户…" style="resize:vertical;font-family:inherit"></textarea>
   </div>
+
+  <button class="btn-add-plate" onclick="addPlateGroup()">+ 添加车牌</button>
 
   <button class="btn-submit" onclick="addRecord()">确认录入</button>
 </div>
@@ -1513,9 +1516,9 @@ function renderRecords(){
           '</div></td>' +
         '</tr>';
 
-        // 备注行：仅当单有备注且为该单最后一行时显示
+        // 备注紧贴显示在该单最后一行下方（视觉上不算独立新行）
         if(showActions && r.note){
-          html += '<tr class="note-row"><td colspan="8" style="font-size:12px;padding:6px 10px;border-bottom:1px dashed #ccc"><span style="font-weight:600">📝 备注：</span>' + esc(r.note) + '</td></tr>';
+          html += '<tr class="note-row"><td colspan="8">📝 <span class="note-tag">备注</span>' + esc(r.note) + '</td></tr>';
         }
       });
       });
@@ -1802,10 +1805,10 @@ function doSearch(){
       '<td class="center" style="white-space:nowrap">' + statusBadge + '</td>' +
     '</tr>';
 
-    // 备注行：仅当本 item 的 recordId 与下一个 item 的 recordId 不同（即该 record 的最后一行）且该 record 有备注时才显示
+    // 备注紧贴显示在该 record 最后一行下方（视觉上不算独立新行）
     var next = matched[idx + 1];
     if(it.note && (!next || next.recordId !== it.recordId)){
-      html += '<tr class="note-row"><td colspan="8" style="font-size:12px;padding:6px 10px;border-bottom:1px dashed #ccc"><span style="font-weight:600">📝 备注：</span>' + esc(it.note) + '</td></tr>';
+      html += '<tr class="note-row"><td colspan="8">📝 <span class="note-tag">备注</span>' + esc(it.note) + '</td></tr>';
     }
   });
 
