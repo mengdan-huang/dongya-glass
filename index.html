@@ -937,7 +937,7 @@ function addItemRow(gid){
     '<div class="ir-type"><label>售出方式</label><div class="custom-select" onclick="event.stopPropagation();toggleCustomSelect(this)"><div class="cs-trigger"><span>安装</span><span class="cs-arrow">▼</span></div><div class="cs-options"><div class="cs-opt selected" data-value="安装" onclick="event.stopPropagation();selectOption(this)">安装</div><div class="cs-opt" data-value="拿货" onclick="event.stopPropagation();selectOption(this)">拿货</div><div class="cs-opt" data-value="包木架" onclick="event.stopPropagation();selectOption(this)">包木架</div></div><input type="hidden" class="ir-stype" value="安装"></div></div>' +
     '<div class="ir-brand"><label>品牌型号</label><input type="text" class="form-input ir-pbrand" list="brandList" placeholder="选填"></div>' +
     '<datalist id="brandList"></datalist>' +
-    '<div class="ir-qty"><label>数量</label><input type="number" class="form-input ir-pqty" placeholder="1" step="1" min="0" inputmode="numeric" value="1"></div>' +
+    '<div class="ir-qty"><label>数量</label><input type="number" class="form-input ir-pqty" placeholder="1" step="0.1" min="0" inputmode="decimal" value="1"></div>' +
     '<div class="ir-amount"><label>金额</label><input type="number" class="form-input ir-pamt" placeholder="选填" step="0.01" inputmode="decimal"></div>' +
     '<div class="ir-paid"><input type="checkbox" class="ir-ppaid"><label>已付</label></div>' +
     '<button class="ir-del" onclick="this.parentElement.remove();updateSummary()">✕</button>';
@@ -1039,7 +1039,8 @@ function addRecord(){
       var product = row.querySelector('.ir-pname').value.trim();
       var stype = row.querySelector('.ir-stype').value;
       var brand = row.querySelector('.ir-pbrand').value.trim();
-      var qty = parseInt(row.querySelector('.ir-pqty').value) || 1;
+      var qty = parseFloat(row.querySelector('.ir-pqty').value);
+      if(!isFinite(qty) || qty < 0) qty = 1;
       var amountStr = row.querySelector('.ir-pamt').value.trim();
       var amount = amountStr === '' ? null : parseFloat(amountStr);
       var isPaid = row.querySelector('.ir-ppaid').checked;
@@ -1507,7 +1508,7 @@ function renderRecords(){
           '<td>' + (row.plate ? esc(row.plate) : '<span style="color:#ccc">—</span>') + '</td>' +
           '<td>' + esc(item.product) + (item.brand ? '<span class="sub">' + esc(item.brand) + '</span>' : '') + '</td>' +
           '<td class="center" style="white-space:nowrap">' + esc(item.saleType||'') + '</td>' +
-          '<td class="right">' + (item.quantity||1) + '</td>' +
+          '<td class="right">' + formatQuantity(item.quantity) + '</td>' +
           '<td class="right"><span class="amt">' + (item.amount === null || item.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(item.amount)) + '</span></td>' +
           '<td class="center"><span class="day-dot ' + dotClass + '"></span>' + statusText + '</td>' +
           '<td class="center"><div class="act-btns">' +
@@ -1632,14 +1633,14 @@ function addEditItemRow(gid, item){
   var p = item ? item.product : '';
   var st = item ? (item.saleType||'安装') : '安装';
   var b = item ? (item.brand||'') : '';
-  var q = item ? (item.quantity||1) : 1;
+  var q = item ? formatQuantity(item.quantity) : 1;
   var a = item ? (item.amount === null || item.amount === undefined ? '' : item.amount) : '';
   var paid = item ? item.isPaid : false;
   row.innerHTML =
     '<div class="ir-product"><label>货品名称</label><input type="text" class="form-input ir-pname" list="productList" placeholder="货品" autocomplete="off" value="' + esc(p) + '"></div>' +
     '<div class="ir-type"><label>售出方式</label><div class="custom-select" onclick="event.stopPropagation();toggleCustomSelect(this)"><div class="cs-trigger"><span>' + st + '</span><span class="cs-arrow">▼</span></div><div class="cs-options"><div class="cs-opt' + (st==='安装'?' selected':'') + '" data-value="安装" onclick="event.stopPropagation();selectOption(this)">安装</div><div class="cs-opt' + (st==='拿货'?' selected':'') + '" data-value="拿货" onclick="event.stopPropagation();selectOption(this)">拿货</div><div class="cs-opt' + (st==='包木架'?' selected':'') + '" data-value="包木架" onclick="event.stopPropagation();selectOption(this)">包木架</div></div><input type="hidden" class="ir-stype" value="' + st + '"></div></div>' +
     '<div class="ir-brand"><label>品牌型号</label><input type="text" class="form-input ir-pbrand" list="brandList" placeholder="选填" value="' + esc(b) + '"></div>' +
-    '<div class="ir-qty"><label>数量</label><input type="number" class="form-input ir-pqty" placeholder="1" step="1" min="0" inputmode="numeric" value="' + q + '"></div>' +
+    '<div class="ir-qty"><label>数量</label><input type="number" class="form-input ir-pqty" placeholder="1" step="0.1" min="0" inputmode="decimal" value="' + q + '"></div>' +
     '<div class="ir-amount"><label>金额</label><input type="number" class="form-input ir-pamt" placeholder="选填" step="0.01" inputmode="decimal" value="' + a + '"></div>' +
     '<div class="ir-paid"><input type="checkbox" class="ir-ppaid"' + (paid?' checked':'') + '><label>已付</label></div>' +
     '<button class="ir-del" onclick="this.parentElement.remove()">✕</button>';
@@ -1675,7 +1676,8 @@ function saveEditRecord(){
       var product = row.querySelector('.ir-pname').value.trim();
       var stype = row.querySelector('.ir-stype').value;
       var brand = row.querySelector('.ir-pbrand').value.trim();
-      var qty = parseInt(row.querySelector('.ir-pqty').value) || 1;
+      var qty = parseFloat(row.querySelector('.ir-pqty').value);
+      if(!isFinite(qty) || qty < 0) qty = 1;
       var amountStr = row.querySelector('.ir-pamt').value.trim();
       var amount = amountStr === '' ? null : parseFloat(amountStr);
       var isPaid = row.querySelector('.ir-ppaid').checked;
@@ -1800,7 +1802,7 @@ function doSearch(){
       '<td>' + (it.plate ? esc(it.plate) : '—') + '</td>' +
       '<td>' + productText + '</td>' +
       '<td class="center" style="white-space:nowrap">' + esc(it.saleType||'') + '</td>' +
-      '<td class="right">' + (it.quantity||1) + '</td>' +
+      '<td class="right">' + formatQuantity(it.quantity) + '</td>' +
       '<td class="right"><span class="amt">' + (it.amount === null || it.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(it.amount)) + '</span></td>' +
       '<td class="center" style="white-space:nowrap">' + statusBadge + '</td>' +
     '</tr>';
@@ -2323,7 +2325,7 @@ function exportCSV(){
       it.product || '',
       it.saleType || '',
       it.brand || '',
-      it.quantity || 1,
+      formatQuantity(it.quantity),
       amountCell,
       it.isMonthly ? '是' : '否',
       statusCell,
@@ -2575,7 +2577,7 @@ function exportMonthlyBilling(){
         it.product || '',
         it.saleType || '',
         it.brand || '',
-        it.quantity || 1,
+        formatQuantity(it.quantity),
         (it.amount === null || it.amount === undefined) ? {v:'待定', __style:'color:#e6a000;font-weight:bold;'} : amt,
         statusCell
       ]);
@@ -2649,7 +2651,7 @@ function exportMonthlyReport(){
         '<td>' + (it.plate ? esc(it.plate) : '-') + '</td>' +
         '<td>' + esc(it.product) + '</td>' +
         '<td>' + (it.brand ? esc(it.brand) : '-') + '</td>' +
-        '<td>' + (it.quantity||1) + '</td>' +
+        '<td>' + formatQuantity(it.quantity) + '</td>' +
         '<td>' + (it.amount === null || it.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(it.amount)) + '</td>' +
         '<td>' + (it.isMonthly ? '<span class="monthly">月结</span>' : '非月结') + '</td>' +
         '<td>' + (it.isPaid ? '已付款' : '<span class="unpaid">未付款</span>') + '</td>' +
@@ -2749,6 +2751,15 @@ function esc(s){
 function formatMoney(n){
   if(n === undefined || n === null || isNaN(n)) n = 0;
   return parseFloat(n).toFixed(2).replace(/\.?0+$/,'') || '0';
+}
+
+function formatQuantity(n){
+  if(n === undefined || n === null || isNaN(n) || n === '') return '1';
+  var v = parseFloat(n);
+  if(!isFinite(v)) return '1';
+  // 整数直接显示原样；非整数保留原精度（限制最多 2 位，避免浮点尾巴如 1.5000000000000002）
+  if(Math.abs(v - Math.round(v)) < 1e-9) return String(Math.round(v));
+  return parseFloat(v.toFixed(2)).toString();
 }
 
 /* ========== 初始化 ========== */
