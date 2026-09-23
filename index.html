@@ -586,6 +586,21 @@ input[type="date"]{font-family:inherit}
   </div>
 </div>
 
+<!-- 单笔明细编辑弹窗 -->
+<div class="receipt-overlay" id="itemEditOverlay">
+  <div class="receipt-panel">
+    <div class="rp-header">
+      <h3>✏️ 编辑单笔明细</h3>
+      <button class="rp-close" onclick="closeItemEdit()">✕</button>
+    </div>
+    <div id="itemEditContent"></div>
+    <div class="receipt-actions">
+      <button class="btn-print" onclick="saveItemEdit()">💾 保存修改</button>
+      <button class="btn-close-r" onclick="closeItemEdit()">取消</button>
+    </div>
+  </div>
+</div>
+
 <!-- 数据备份面板 -->
 <div class="backup-overlay" id="backupOverlay">
   <div class="backup-panel">
@@ -1714,6 +1729,116 @@ function saveEditRecord(){
   updateAll();
 }
 
+/* ========== 单笔明细编辑 ========== */
+var editingItemRecordId = null;
+var editingItemId = null;
+
+function openItemEdit(recordId, itemId){
+  var found = findItem(recordId, itemId);
+  if(!found){ showToast('未找到该笔记录'); return; }
+  var r = found.record, item = found.item;
+  editingItemRecordId = recordId;
+  editingItemId = itemId;
+
+  var st = item.saleType || '安装';
+  var q = formatQuantity(item.quantity);
+  var a = (item.amount === null || item.amount === undefined) ? '' : item.amount;
+
+  var html = '' +
+    '<div class="form-card">' +
+      '<div style="font-size:13px;font-weight:600;color:var(--text-2);margin:0 0 8px">整单信息</div>' +
+      '<div class="form-group">' +
+        '<label>日期 <span class="req">*</span></label>' +
+        '<input type="date" class="form-input" id="ieDate" value="' + esc(r.date) + '">' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label>客户名称 <span class="req">*</span></label>' +
+        '<input type="text" class="form-input" id="ieCustomer" list="customerList" value="' + esc(r.customer) + '" autocomplete="off">' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label>车牌号码</label>' +
+        '<input type="text" class="form-input" id="iePlate" list="plateList" placeholder="留空=无车牌" autocomplete="off" style="text-transform:uppercase" value="' + esc(r.plates && r.plates[0] ? (r.plates[0].plate||'') : '') + '">' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<div class="switch-row">' +
+          '<span class="switch-label"><span class="dot blue"></span>月结客户</span>' +
+          '<div class="switch' + (r.isMonthly ? ' on' : '') + '" id="ieSwitchMonthly" onclick="toggleItemEditSwitch()"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:13px;font-weight:600;color:var(--text-2);margin:10px 0 4px">本笔货品</div>' +
+      '<div class="item-row">' +
+        '<div class="ir-product"><label>货品名称</label><input type="text" class="form-input ie-pname" list="productList" placeholder="货品" autocomplete="off" value="' + esc(item.product) + '"></div>' +
+        '<div class="ir-type"><label>售出方式</label><div class="custom-select" onclick="event.stopPropagation();toggleCustomSelect(this)"><div class="cs-trigger"><span>' + st + '</span><span class="cs-arrow">▼</span></div><div class="cs-options"><div class="cs-opt' + (st==='安装'?' selected':'') + '" data-value="安装" onclick="event.stopPropagation();selectOption(this)">安装</div><div class="cs-opt' + (st==='拿货'?' selected':'') + '" data-value="拿货" onclick="event.stopPropagation();selectOption(this)">拿货</div><div class="cs-opt' + (st==='包木架'?' selected':'') + '" data-value="包木架" onclick="event.stopPropagation();selectOption(this)">包木架</div></div><input type="hidden" class="ie-stype" value="' + st + '"></div></div>' +
+        '<div class="ir-brand"><label>品牌型号</label><input type="text" class="form-input ie-pbrand" list="brandList" placeholder="选填" value="' + esc(item.brand||'') + '"></div>' +
+        '<div class="ir-qty"><label>数量</label><input type="number" class="form-input ie-pqty" placeholder="1" step="0.1" min="0" inputmode="decimal" value="' + q + '"></div>' +
+        '<div class="ir-amount"><label>金额</label><input type="number" class="form-input ie-pamt" placeholder="选填" step="0.01" inputmode="decimal" value="' + a + '"></div>' +
+        '<div class="ir-paid"><input type="checkbox" class="ie-ppaid"' + (item.isPaid?' checked':'') + '><label>已付</label></div>' +
+      '</div>' +
+      '<div class="form-group" style="margin-top:10px">' +
+        '<label>备注 <span style="font-size:12px;color:var(--text-2);font-weight:400">（整单共用，选填）</span></label>' +
+        '<textarea class="form-input" id="ieNote" rows="2" style="resize:vertical;font-family:inherit">' + esc(r.note||'') + '</textarea>' +
+      '</div>' +
+    '</div>';
+
+  document.getElementById('itemEditContent').innerHTML = html;
+  document.getElementById('itemEditOverlay').classList.add('show');
+}
+
+function toggleItemEditSwitch(){
+  document.getElementById('ieSwitchMonthly').classList.toggle('on');
+}
+
+function closeItemEdit(){
+  document.getElementById('itemEditOverlay').classList.remove('show');
+  editingItemRecordId = null;
+  editingItemId = null;
+}
+
+function saveItemEdit(){
+  var found = findItem(editingItemRecordId, editingItemId);
+  if(!found){ closeItemEdit(); return; }
+  var r = found.record, item = found.item;
+
+  var date = document.getElementById('ieDate').value;
+  var customer = document.getElementById('ieCustomer').value.trim();
+  var plate = document.getElementById('iePlate').value.trim();
+  var isMonthly = document.getElementById('ieSwitchMonthly').classList.contains('on');
+  var note = document.getElementById('ieNote').value.trim();
+
+  var product = document.querySelector('#itemEditContent .ie-pname').value.trim();
+  var stype = document.querySelector('#itemEditContent .ie-stype').value;
+  var brand = document.querySelector('#itemEditContent .ie-pbrand').value.trim();
+  var qty = parseFloat(document.querySelector('#itemEditContent .ie-pqty').value);
+  if(!isFinite(qty) || qty < 0) qty = 1;
+  var amountStr = document.querySelector('#itemEditContent .ie-pamt').value.trim();
+  var amount = amountStr === '' ? null : parseFloat(amountStr);
+  var isPaid = document.querySelector('#itemEditContent .ie-ppaid').checked;
+
+  if(!date){ showToast('请选择日期'); return; }
+  if(!customer){ showToast('请输入客户名称'); return; }
+  if(!product){ showToast('请输入货品名称'); return; }
+
+  // 更新整单信息
+  r.date = date;
+  r.customer = customer;
+  r.isMonthly = isMonthly;
+  if(found.plateGroup) found.plateGroup.plate = plate;
+  if(note) r.note = note; else delete r.note;
+
+  // 更新本笔货品
+  item.product = product;
+  item.saleType = stype;
+  item.brand = brand;
+  item.quantity = qty;
+  item.amount = amount;
+  item.isPaid = isPaid;
+
+  saveData();
+  closeItemEdit();
+  showToast('修改已保存 ✓');
+  updateAll();
+}
+
 /* ========== 搜索功能 ========== */
 function setSearchType(type){
   searchType = type;
@@ -1784,6 +1909,7 @@ function doSearch(){
     '<th class="right">数量</th>' +
     '<th class="right">金额</th>' +
     '<th class="center">状态</th>' +
+    '<th class="center">操作</th>' +
     '</tr></thead><tbody>';
 
   matched.forEach(function(it, idx){
@@ -1805,12 +1931,15 @@ function doSearch(){
       '<td class="right">' + formatQuantity(it.quantity) + '</td>' +
       '<td class="right"><span class="amt">' + (it.amount === null || it.amount === undefined ? '<span style="color:#e6a000;font-weight:600">待定</span>' : formatMoney(it.amount)) + '</span></td>' +
       '<td class="center" style="white-space:nowrap">' + statusBadge + '</td>' +
+      '<td class="center"><div class="act-btns">' +
+        '<button class="edit" onclick="openItemEdit(\'' + it.recordId + '\',\'' + it.itemId + '\')">编辑</button>' +
+      '</div></td>' +
     '</tr>';
 
     // 备注紧贴显示在该 record 最后一行下方（视觉上不算独立新行）
     var next = matched[idx + 1];
     if(it.note && (!next || next.recordId !== it.recordId)){
-      html += '<tr class="note-row"><td colspan="8">📝 <span class="note-tag">备注</span>' + esc(it.note) + '</td></tr>';
+      html += '<tr class="note-row"><td colspan="9">📝 <span class="note-tag">备注</span>' + esc(it.note) + '</td></tr>';
     }
   });
 
