@@ -1009,6 +1009,21 @@ document.addEventListener('touchstart', function(e){
   }
 }, {passive:true});
 
+// 车牌输入：字母实时转为大写（录入 / 编辑 / 单笔编辑三处共用）
+document.addEventListener('input', function(e){
+  var el = e.target;
+  if(!el || (el.tagName !== 'INPUT')) return;
+  if(!(el.classList.contains('pg-plate') || el.id === 'iePlate')) return;
+  var v = el.value;
+  var up = v.toUpperCase();
+  if(v !== up){
+    var s = el.selectionStart, t = el.selectionEnd;
+    el.value = up;
+    try{ el.setSelectionRange(s, t); }catch(err){}
+  }
+});
+
+
 function initEntryForm(){
   plateGroupCounter = 0;
   document.getElementById('platesContainer').innerHTML = '';
@@ -1048,7 +1063,7 @@ function addRecord(){
   var hasValidItem = false;
 
   plateGroups.forEach(function(pg){
-    var plateStr = pg.querySelector('.pg-plate').value.trim();
+    var plateStr = pg.querySelector('.pg-plate').value.trim().toUpperCase();
     var items = [];
     pg.querySelectorAll('.item-row').forEach(function(row){
       var product = row.querySelector('.ir-pname').value.trim();
@@ -1122,10 +1137,10 @@ function toggleImport(){
 
 function parsePlate(text){
   var provinces = '京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼';
-  var re = new RegExp('[' + provinces + '][A-Z]\\s*[A-Z0-9]{4,6}');
+  var re = new RegExp('[' + provinces + '][A-Z]\\s*[A-Z0-9]{4,6}', 'i');
   var m = text.match(re);
   if(m){
-    var plate = m[0].replace(/\s+/g,'');
+    var plate = m[0].replace(/\s+/g,'').toUpperCase();
     var cleaned = text.replace(m[0], ' ').replace(/\s+/g,' ').trim();
     return { plate: plate, rest: cleaned };
   }
@@ -1685,7 +1700,7 @@ function saveEditRecord(){
   var hasValidItem = false;
 
   plateGroups.forEach(function(pg){
-    var plateStr = pg.querySelector('.pg-plate').value.trim();
+    var plateStr = pg.querySelector('.pg-plate').value.trim().toUpperCase();
     var items = [];
     pg.querySelectorAll('.item-row').forEach(function(row){
       var product = row.querySelector('.ir-pname').value.trim();
@@ -1801,7 +1816,7 @@ function saveItemEdit(){
 
   var date = document.getElementById('ieDate').value;
   var customer = document.getElementById('ieCustomer').value.trim();
-  var plate = document.getElementById('iePlate').value.trim();
+  var plate = document.getElementById('iePlate').value.trim().toUpperCase();
   var isMonthly = document.getElementById('ieSwitchMonthly').classList.contains('on');
   var note = document.getElementById('ieNote').value.trim();
 
