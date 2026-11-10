@@ -1,10 +1,12 @@
-var CACHE_NAME = 'dongya-glass-v58';
+var CACHE_NAME = 'dongya-glass-v59';
 var ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
+  './icon-maskable-192.png',
+  './icon-maskable-512.png',
   './apple-touch-icon.png'
 ];
 
