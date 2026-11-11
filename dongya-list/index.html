@@ -787,7 +787,7 @@ const C = {
   red:'#C0392B', ink:'#141414',
   /* 标签与正文同色，靠字重/字号区分层级，打印出来浓淡一致 */
   sub:'#141414',
-  line:'#C9C4C0', edge:'#A9A29D',   /* 线条加深，打印更清楚 */
+  line:'#948E88', edge:'#57524D',   /* 线条深灰，打印清楚 */
   head:'#FFFFFF', zebra:'#FFFFFF', total:'#FFFFFF'   /* 表格底色统一为纯白，只靠线条分隔 */
 };
 const HEAD_H = 29, ROW_H = 26, TOT_H = 33, TABLE_TOP = 152, QR_SIZE = 75;
@@ -852,7 +852,7 @@ function draw(){
   const tableBottom = TABLE_TOP + HEAD_H + ROW_H * nRows + TOT_H;
   /* 页面固定一页 9×5，行多才向下延伸；行高恒定，不随行数变化 */
   /* 页面高度随内容：表格下紧跟页脚，不留一大片空白 */
-  const H = tableBottom + (note ? 74 : 56);
+  const H = tableBottom + (note ? 70 : 52);
   const scale = 3;
 
   canvas.width = W * scale; canvas.height = H * scale;
@@ -897,7 +897,7 @@ function draw(){
   }
 
   ctx.strokeStyle = C.line;
-  hl(M, 96, qx - 12);   /* 分隔线止于二维码左侧，二维码横跨标题与信息行 */
+  hl(M, 92, qx - 12);   /* 分隔线止于二维码左侧，二维码横跨标题与信息行 */
 
   /* ---------- 客户信息 ---------- */
   function kv(label, value, x, baseline, maxW){
@@ -919,7 +919,7 @@ function draw(){
   }
   const GAP = 24, COLW = (CW - QR_SIZE - 12 - GAP) / 2, RX = M + COLW + GAP;
   /* 两行信息行距收紧到与字号相当（约 1.4 倍字体高），上下与标题/表格靠紧 */
-  const ROW1 = 118, ROW2 = ROW1 + 20;
+  const ROW1 = 112, ROW2 = ROW1 + 20;
   kv('客户名称', v('customer'), M,  ROW1, COLW);
   kv('客户电话', v('cphone'),   RX, ROW1, COLW);
   kv('客户地址', v('caddr'),    M,  ROW2, COLW);
@@ -992,15 +992,15 @@ function draw(){
 
   /* ---------- 页脚 ---------- */
   /* 页脚紧跟表格下沿，随内容走 */
-  const fy = tableBottom + 14;   /* 表格下沿到地址栏：收紧 */
+  const fy = tableBottom + 8;    /* 分隔线贴近表格下沿 */
   ctx.strokeStyle = C.line;
   hl(M, fy, M + CW);
   font(12, 500);
   ctx.fillStyle = C.ink;
-  ctx.fillText(fitText('地址：' + v('saddr'), CW * 0.58), M, fy + 19);
+  ctx.fillText(fitText('地址：' + v('saddr'), CW * 0.58), M, fy + 17);
   const ph = '电话：' + v('sphone');
-  ctx.fillText(ph, M + CW - ctx.measureText(ph).width, fy + 19);
-  if(note) ctx.fillText(fitText('温馨提示：' + note, CW), M, fy + 38);
+  ctx.fillText(ph, M + CW - ctx.measureText(ph).width, fy + 17);
+  if(note) ctx.fillText(fitText('温馨提示：' + note, CW), M, fy + 35);
 }
 
 /* ================= 导出 / 预览 ================= */
