@@ -846,6 +846,36 @@ function draw(){
       amount: (qty && price) ? fmt(qty * price) : ''
     };
   });
+  /* ---------- 动态列宽：备注/产品名称随内容加宽，其余列相应收缩，表格外框总宽不变 ---------- */
+  const BASE_W = [44, 118, 246, 76, 46, 46, 76, 100];
+  const MIN_W  = [40, 118, 246, 64, 36, 36, 62, 78];
+  font(14, 500);
+  let needPlate = 0, needProd = 0;
+  rows.forEach(r => {
+    needPlate = Math.max(needPlate, ctx.measureText(String(r.plate || '')).width);
+    needProd  = Math.max(needProd,  ctx.measureText(String(r.product || '')).width);
+  });
+  const wantPlate = Math.max(BASE_W[1], Math.ceil(needPlate) + 18);
+  const wantProd  = Math.max(BASE_W[2], Math.ceil(needProd) + 18);
+  let extra = (wantPlate - BASE_W[1]) + (wantProd - BASE_W[2]);
+  const ws = BASE_W.slice();
+  /* 从可收缩列扣：品牌型号(可遮挡)→销售金额→销售价格→序号→单位→数量 */
+  const donors = [3, 7, 6, 0, 4, 5];
+  donors.forEach(d => {
+    const take = Math.min(ws[d] - MIN_W[d], Math.max(extra, 0));
+    ws[d] -= take; extra -= take;
+  });
+  /* 腾出的空间全部分给备注/产品名称：备注优先，其余给产品名称 */
+  const give = CW - ws.reduce((s, w) => s + w, 0);
+  if(give > 0){
+    const gp = Math.min(wantPlate - BASE_W[1], give);
+    ws[1] += gp;
+    ws[2] += give - gp;
+  }
+  ws.forEach((w, wi) => { COLS[wi].w = w; });
+  cx.length = 0; let acc = M;
+  COLS.forEach(c => { cx.push(acc); acc += c.w; });
+
   const nRows = Math.max(rows.length, 1);
   const total = totalOf();
   const note = v('snote');
@@ -945,7 +975,7 @@ function draw(){
       const isNum = c.key === 'price' || c.key === 'amount';
       font(14, isNum ? 700 : 500);
       ctx.fillStyle = C.ink;
-      put(r[c.key], cx[ci], c.w, baseline, c.align, 10);
+      put(r[c.key], cx[ci], c.w, baseline, c.align, (c.key === 'plate' || c.key === 'product') ? 6 : 10);
     });
   });
 
