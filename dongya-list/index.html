@@ -757,7 +757,7 @@ function draw(){
   const tableBottom = TABLE_TOP + HEAD_H + ROW_H * nRows + TOT_H;
   /* 页面固定一页 9×5，行多才向下延伸；行高恒定，不随行数变化 */
   /* 页面高度随内容：表格下紧跟页脚，不留一大片空白 */
-  const H = tableBottom + (note ? 92 : 66);
+  const H = tableBottom + (note ? 74 : 56);
   const scale = 3;
 
   canvas.width = W * scale; canvas.height = H * scale;
@@ -897,15 +897,15 @@ function draw(){
 
   /* ---------- 页脚 ---------- */
   /* 页脚紧跟表格下沿，随内容走 */
-  const fy = tableBottom + 24;
+  const fy = tableBottom + 14;   /* 表格下沿到地址栏：收紧 */
   ctx.strokeStyle = C.line;
   hl(M, fy, M + CW);
   font(12, 500);
   ctx.fillStyle = C.ink;
-  ctx.fillText(fitText('地址：' + v('saddr'), CW * 0.58), M, fy + 20);
+  ctx.fillText(fitText('地址：' + v('saddr'), CW * 0.58), M, fy + 19);
   const ph = '电话：' + v('sphone');
-  ctx.fillText(ph, M + CW - ctx.measureText(ph).width, fy + 20);
-  if(note) ctx.fillText(fitText('温馨提示：' + note, CW), M, fy + 40);
+  ctx.fillText(ph, M + CW - ctx.measureText(ph).width, fy + 19);
+  if(note) ctx.fillText(fitText('温馨提示：' + note, CW), M, fy + 38);
 }
 
 /* ================= 导出 / 预览 ================= */
