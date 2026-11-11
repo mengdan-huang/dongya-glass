@@ -695,7 +695,7 @@ const C = {
   line:'#EDEAE8', edge:'#D8D4D1',
   head:'#F7F4F3', zebra:'#FCFBFA', total:'#FBF5F3'
 };
-const HEAD_H = 42, ROW_H = 36, TOT_H = 48, TABLE_TOP = 182, QR_SIZE = 68;
+const HEAD_H = 42, ROW_H = 36, TOT_H = 48, TABLE_TOP = 166, QR_SIZE = 64;
 
 const COLS = [
   {key:'idx',     label:'序号',     w:44,  align:'center'},  /* 序号居中 */
@@ -784,7 +784,7 @@ function draw(){
   ctx.fillText(SUB, (W - sw) / 2, 81);
   ctx.restore();
 
-  const qx = W - M - QR_SIZE, qy = 30;
+  const qx = W - M - QR_SIZE, qy = 26;
   if(qrImg){
     ctx.drawImage(qrImg, qx, qy, QR_SIZE, QR_SIZE);
   } else {
@@ -802,7 +802,7 @@ function draw(){
   }
 
   ctx.strokeStyle = C.line;
-  hl(M, 102, M + CW);
+  hl(M, 96, M + CW);
 
   /* ---------- 客户信息 ---------- */
   function kv(label, value, x, baseline, maxW){
@@ -823,8 +823,8 @@ function draw(){
     if(t) ctx.fillText(t, x + lw + 8, baseline);
   }
   const GAP = 24, COLW = (CW - GAP) / 2, RX = M + COLW + GAP;
-  /* 两行信息行距收紧到与字号相当（约 1.4 倍字体高） */
-  const ROW1 = 134, ROW2 = ROW1 + 20;
+  /* 两行信息行距收紧到与字号相当（约 1.4 倍字体高），上下与标题/表格靠紧 */
+  const ROW1 = 118, ROW2 = ROW1 + 20;
   kv('客户名称', v('customer'), M,  ROW1, COLW);
   kv('客户电话', v('cphone'),   RX, ROW1, COLW);
   kv('客户地址', v('caddr'),    M,  ROW2, COLW);
