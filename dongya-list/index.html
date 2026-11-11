@@ -362,7 +362,7 @@
               <img id="qrPrev" alt="" hidden>
               <span id="qrClear" class="qr-clear" hidden>清除二维码</span>
             </div>
-            <div class="qr-hint">点按钮选一张，即自动保存，之后每次开单自动沿用</div></div>
+            <div class="qr-hint">点按钮选一张，即自动保存，之后每次开单自动沿用 <span id="verTag"></span></div></div>
         </div>
       </details>
 
@@ -657,7 +657,8 @@ function normalizeQr(file){
     im.src = url;
   });
 }
-$('qr').addEventListener('click', () => { toast('正在打开图片选择…'); });
+$('verTag').textContent = '(' + APP_VER + ')';
+$('qr').addEventListener('click', () => { toast('正在打开图片选择… ' + APP_VER); });
 $('qr').addEventListener('change', async e => {
   const f = e.target.files[0];
   if(!f) return;
@@ -1002,6 +1003,7 @@ const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isAndroid = /Android/i.test(navigator.userAgent);
 const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+const APP_VER = 'v17';   /* 用于确认手机上运行的版本 */
 
 function fileName(){
   return '销售清单_' + (v('customer') || '客户') + '_' + (v('date') || todayStr()) + '.png';
