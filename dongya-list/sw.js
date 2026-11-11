@@ -1,6 +1,6 @@
-const CACHE = 'dongya-list-v7';
+const CACHE = 'dongya-list-v8';
 const ASSETS = ['./', './index.html', './manifest.webmanifest',
-  './icon-192.png', './icon-512.png', './icon-180.png'];
+  './icon-192-v2.png', './icon-512-v2.png', './icon-180-v2.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
