@@ -871,22 +871,30 @@ function draw(){
     needPlate = Math.max(needPlate, ctx.measureText(String(r.plate || '')).width);
     needProd  = Math.max(needProd,  ctx.measureText(String(r.product || '')).width);
   });
+  /* 备注列也可收缩，但下限是仍能完整显示备注内容的宽度（内容短就多让，内容长不让到截断） */
+  MIN_W[1] = Math.min(BASE_W[1], Math.max(44, Math.ceil(needPlate) + 14));
   const wantPlate = Math.max(BASE_W[1], Math.ceil(needPlate) + 18);
   const wantProd  = Math.max(BASE_W[2], Math.ceil(needProd) + 18);
   let extra = (wantPlate - BASE_W[1]) + (wantProd - BASE_W[2]);
   const ws = BASE_W.slice();
-  /* 从可收缩列扣：品牌型号(可遮挡)→销售金额→销售价格→序号→单位→数量 */
-  const donors = [3, 7, 6, 0, 4, 5];
+  /* 从可收缩列扣：品牌型号(可遮挡)→备注(保内容完整)→销售金额→销售价格→序号→单位→数量 */
+  const donors = [3, 1, 7, 6, 0, 4, 5];
   donors.forEach(d => {
     const take = Math.min(ws[d] - MIN_W[d], Math.max(extra, 0));
     ws[d] -= take; extra -= take;
   });
-  /* 腾出的空间全部分给备注/产品名称：备注优先，其余给产品名称 */
+  /* 腾出的空间按备注/产品名称各自缺口比例分配，两列都尽量显示完整 */
   const give = CW - ws.reduce((s, w) => s + w, 0);
   if(give > 0){
-    const gp = Math.min(wantPlate - BASE_W[1], give);
-    ws[1] += gp;
-    ws[2] += give - gp;
+    const shortPlate = Math.max(0, wantPlate - ws[1]);
+    const shortProd  = Math.max(0, wantProd  - ws[2]);
+    const sum = shortPlate + shortProd;
+    if(sum > 0){
+      ws[1] += Math.floor(give * shortPlate / sum);
+      ws[2] += give - Math.floor(give * shortPlate / sum);
+    } else {
+      ws[2] += give;
+    }
   }
   ws.forEach((w, wi) => { COLS[wi].w = w; });
   cx.length = 0; let acc = M;
@@ -992,7 +1000,7 @@ function draw(){
       ctx.fillStyle = C.ink;
       if(c.key === 'plate' || c.key === 'product'){
         /* 备注/产品名称：先靠动态列宽，仍放不下则缩字号，保证内容完整显示 */
-        putFit(r[c.key], cx[ci], c.w, baseline, c.align, 6, 14, 9, 500);
+        putFit(r[c.key], cx[ci], c.w, baseline, c.align, 6, 14, 8.5, 500);
       } else {
         font(14, isNum ? 700 : 500);
         put(r[c.key], cx[ci], c.w, baseline, c.align, 10);
