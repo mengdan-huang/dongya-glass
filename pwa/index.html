@@ -871,8 +871,13 @@ function draw(){
     needPlate = Math.max(needPlate, ctx.measureText(String(r.plate || '')).width);
     needProd  = Math.max(needProd,  ctx.measureText(String(r.product || '')).width);
   });
-  /* 备注列也可收缩，但下限是仍能完整显示备注内容的宽度（内容短就多让，内容长不让到截断） */
-  MIN_W[1] = Math.min(BASE_W[1], Math.max(44, Math.ceil(needPlate) + 14));
+  /* 备注列下限按 10px 字号的内容宽度算：内容短就让得更多，putFit 会自动缩字号保完整 */
+  font(10, 500);
+  let minPlate = 0;
+  rows.forEach(r => {
+    minPlate = Math.max(minPlate, ctx.measureText(String(r.plate || '')).width);
+  });
+  MIN_W[1] = Math.min(BASE_W[1], Math.max(40, Math.ceil(minPlate) + 12));
   const wantPlate = Math.max(BASE_W[1], Math.ceil(needPlate) + 18);
   const wantProd  = Math.max(BASE_W[2], Math.ceil(needProd) + 18);
   let extra = (wantPlate - BASE_W[1]) + (wantProd - BASE_W[2]);
@@ -883,10 +888,10 @@ function draw(){
     const take = Math.min(ws[d] - MIN_W[d], Math.max(extra, 0));
     ws[d] -= take; extra -= take;
   });
-  /* 腾出的空间按备注/产品名称各自缺口比例分配，两列都尽量显示完整 */
+  /* 腾出的空间按缺口比例分配：备注只申请 14px 完整显示所需宽度，其余尽量给产品名称 */
   const give = CW - ws.reduce((s, w) => s + w, 0);
   if(give > 0){
-    const shortPlate = Math.max(0, wantPlate - ws[1]);
+    const shortPlate = Math.max(0, Math.ceil(needPlate) + 14 - ws[1]);
     const shortProd  = Math.max(0, wantProd  - ws[2]);
     const sum = shortPlate + shortProd;
     if(sum > 0){
