@@ -919,7 +919,7 @@ function draw(){
   }
   const GAP = 24, COLW = (CW - QR_SIZE - 12 - GAP) / 2, RX = M + COLW + GAP;
   /* 两行信息行距收紧到与字号相当（约 1.4 倍字体高），上下与标题/表格靠紧 */
-  const ROW1 = 115, ROW2 = ROW1 + 20;   /* 与标题、表格的视觉空隙对称 */
+  const ROW1 = 117, ROW2 = ROW1 + 20;   /* 按中文字高对齐：上下视觉空隙一致 */
   kv('客户名称', v('customer'), M,  ROW1, COLW);
   kv('客户电话', v('cphone'),   RX, ROW1, COLW);
   kv('客户地址', v('caddr'),    M,  ROW2, COLW);
