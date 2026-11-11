@@ -115,6 +115,7 @@
   details.more[open]{margin-bottom:64px;}
   .field.focus{border-bottom-color:var(--red);}
   .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+  .two-col.addr-date{grid-template-columns:1.45fr 1fr;}
 
   /* 明细卡片 */
   .item{
@@ -127,20 +128,15 @@
     width:20px;height:20px;border-radius:6px;background:var(--red-soft);color:var(--red);
     font-size:11.5px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
   }
-  .item-top input.plate{
-    flex:1;min-width:0;border:none;background:transparent;font-size:15px;font-weight:600;
-    font-family:inherit;color:var(--text);
-  }
-  .item-top input.plate::placeholder{font-weight:400;color:#c3c7cd;}
+  .item-top .cell{flex:1;min-width:0;}
+  .cell input.plate{font-weight:600;font-size:14.5px;}
+  .cell-prod{margin-top:8px;}
+  .cell input.prod{font-size:14px;}
   .del-btn{
     border:none;background:transparent;color:#c9ccd2;font-size:15px;
     width:26px;height:26px;border-radius:8px;cursor:pointer;flex:0 0 auto;
   }
   .del-btn:active{background:#f6f7f8;color:var(--red);}
-  .item input.prod{
-    width:100%;border:none;background:transparent;font-size:14px;color:#3a3f47;
-    padding:6px 0 8px;font-family:inherit;
-  }
   .item input.prod::placeholder{color:#c3c7cd;}
   .item input:focus{outline:none;}
   .item-grid{display:grid;grid-template-columns:1.5fr .9fr .8fr 1.05fr;gap:8px;}
@@ -333,10 +329,12 @@
           <div class="field"><label>客户电话</label>
             <input id="cphone" inputmode="tel" placeholder="选填"></div>
         </div>
-        <div class="field"><label>客户地址</label>
-          <input id="caddr" placeholder="选填"></div>
-        <div class="field"><label>日期</label>
-          <input id="date" type="date"></div>
+        <div class="two-col addr-date">
+          <div class="field"><label>客户地址</label>
+            <input id="caddr" placeholder="选填"></div>
+          <div class="field"><label>日期</label>
+            <input id="date" type="date"></div>
+        </div>
       </div>
 
       <div class="card-head" style="padding:0 4px;">
@@ -534,10 +532,12 @@ function renderItems(){
     el.innerHTML = `
       <div class="item-top">
         <div class="idx">${i+1}</div>
-        <input class="plate" data-k="plate" value="${esc(it.plate)}" placeholder="车牌号，如 湘A 8G128">
+        <div class="cell cell-plate"><span>备注 / 车牌</span>
+          <input class="plate" data-k="plate" value="${esc(it.plate)}" placeholder="如 湘A 8G128"></div>
         <button class="del-btn" title="删除">✕</button>
       </div>
-      <input class="prod" data-k="product" value="${esc(it.product)}" placeholder="产品名称，如 金杯小海狮前挡风玻璃拆装">
+      <div class="cell cell-prod"><span>产品名称</span>
+        <input class="prod" data-k="product" value="${esc(it.product)}" placeholder="如 前挡风玻璃"></div>
       <div class="item-grid">
         <div class="cell"><span>品牌型号</span><input data-k="brand" value="${esc(it.brand)}" placeholder="选填"></div>
         <div class="cell"><span>单位</span><input data-k="unit" value="${esc(it.unit)}"></div>
