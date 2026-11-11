@@ -1,4 +1,4 @@
-const CACHE = 'dongya-list-v6';
+const CACHE = 'dongya-list-v7';
 const ASSETS = ['./', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-180.png'];
 
