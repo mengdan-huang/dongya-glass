@@ -786,7 +786,7 @@ const C = {
   line:'#948E88', edge:'#57524D',   /* 线条深灰，打印清楚 */
   head:'#FFFFFF', zebra:'#FFFFFF', total:'#FFFFFF'   /* 表格底色统一为纯白，只靠线条分隔 */
 };
-const HEAD_H = 29, ROW_H = 26, TOT_H = 33, TABLE_TOP = 152, QR_SIZE = 75;
+const HEAD_H = 29, ROW_H = 26, TOT_H = 33, TABLE_TOP = 147, QR_SIZE = 75;
 
 const COLS = [
   {key:'idx',     label:'序号',     w:44,  align:'center'},  /* 序号居中 */
@@ -978,7 +978,7 @@ function draw(){
   }
   const GAP = 24, COLW = (CW - QR_SIZE - 12 - GAP) / 2, RX = M + COLW + GAP;
   /* 两行信息行距收紧到与字号相当（约 1.4 倍字体高），上下与标题/表格靠紧 */
-  const ROW1 = 117, ROW2 = ROW1 + 20;   /* 按中文字高对齐：上下视觉空隙一致 */
+  const ROW1 = 112, ROW2 = ROW1 + 20;   /* 跟随分隔线上提，行距与上下空隙保持不变 */
   kv('客户名称', v('customer'), M,  ROW1, COLW);
   kv('客户电话', v('cphone'),   RX, ROW1, COLW);
   kv('客户地址', v('caddr'),    M,  ROW2, COLW);
