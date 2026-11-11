@@ -777,7 +777,7 @@ const C = {
   line:'#EDEAE8', edge:'#D8D4D1',
   head:'#FFFFFF', zebra:'#FFFFFF', total:'#FFFFFF'   /* 表格底色统一为纯白，只靠线条分隔 */
 };
-const HEAD_H = 42, ROW_H = 36, TOT_H = 48, TABLE_TOP = 152, QR_SIZE = 112;
+const HEAD_H = 38, ROW_H = 31, TOT_H = 44, TABLE_TOP = 152, QR_SIZE = 112;
 
 const COLS = [
   {key:'idx',     label:'序号',     w:44,  align:'center'},  /* 序号居中 */
@@ -924,10 +924,10 @@ function draw(){
 
   font(13, 700);
   ctx.fillStyle = C.ink;
-  COLS.forEach((c, i) => put(c.label, cx[i], c.w, T + 27, 'center', 5));  /* 表头统一居中 */
+  COLS.forEach((c, i) => put(c.label, cx[i], c.w, T + Math.round(HEAD_H * 0.64), 'center', 5));  /* 表头统一居中 */
 
   rows.forEach((r, ri) => {
-    const baseline = bodyTop + ROW_H * ri + 24;
+    const baseline = bodyTop + ROW_H * ri + Math.round(ROW_H * 0.67);
     COLS.forEach((c, ci) => {
       const isNum = c.key === 'price' || c.key === 'amount';
       font(14, isNum ? 700 : 500);
@@ -937,7 +937,7 @@ function draw(){
   });
 
   /* ---------- 合计行 ---------- */
-  const tb = totTop + 30;
+  const tb = totTop + Math.round(TOT_H * 0.63);
   const lab = '合计金额（大写）';
   font(12.5, 400);
   ctx.fillStyle = C.sub;
