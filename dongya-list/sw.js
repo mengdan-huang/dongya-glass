@@ -1,4 +1,4 @@
-const CACHE = 'dongya-list-v16';
+const CACHE = 'dongya-list-v17';
 const ASSETS = ['./', './index.html', './manifest.webmanifest',
   './icon-192-v2.png', './icon-512-v2.png', './icon-180-v2.png'];
 
@@ -22,7 +22,7 @@ self.addEventListener('fetch', e => {
   /* 页面：先联网拿最新版，失败才用缓存（保证每次更新都能生效） */
   if(isPage){
     e.respondWith(
-      fetch(e.request).then(res => {
+      fetch(e.request, { cache: 'reload' }).then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
         return res;
