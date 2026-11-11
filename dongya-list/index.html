@@ -231,10 +231,14 @@
     min-height:100%;display:flex;align-items:center;justify-content:center;
   }
   .lightbox img{
-    max-width:100%;max-height:calc(100vh - 150px);
+    max-width:100%;max-height:calc(100vh - 170px);
     object-fit:contain;border-radius:4px;
     box-shadow:0 14px 50px rgba(0,0,0,.55);background:#fff;
+    /* 允许长按唤起「存储图像」 */
+    -webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto;
   }
+  .lb-tip{font-size:11.5px;color:rgba(255,255,255,.62);text-align:center;margin-bottom:8px;letter-spacing:.2px;}
+  .lb-btns{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;}
   .lb-close{
     position:fixed;top:calc(12px + env(safe-area-inset-top));right:14px;
     width:36px;height:36px;border-radius:50%;border:none;
@@ -245,7 +249,6 @@
   .lb-bar{
     position:fixed;left:0;right:0;bottom:0;
     padding:14px 16px calc(16px + env(safe-area-inset-bottom));
-    display:grid;grid-template-columns:1.2fr 1fr;gap:10px;
     background:linear-gradient(to top, rgba(12,12,14,.92), rgba(12,12,14,0));
   }
   .lb-bar button{
@@ -406,8 +409,11 @@
   <div class="lb-scroll"><img id="lbImg" alt="销售清单预览"></div>
   <button class="lb-close" id="lbClose" aria-label="关闭">✕</button>
   <div class="lb-bar">
-    <button class="primary" id="lbSave">保存到相册</button>
-    <button id="lbShare">分享</button>
+    <div class="lb-tip">长按图片可直接「保存图片」到相册</div>
+    <div class="lb-btns">
+      <button class="primary" id="lbSave">保存图片</button>
+      <button id="lbShare">分享</button>
+    </div>
   </div>
 </div>
 
@@ -440,7 +446,7 @@ function toast(msg){
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 1800);
+  t._timer = setTimeout(() => t.classList.remove('show'), msg.length > 12 ? 3200 : 1800);
 }
 
 /* ================= 数值 ================= */
@@ -987,6 +993,8 @@ function draw(){
 /* ================= 导出 / 预览 ================= */
 const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/i.test(navigator.userAgent);
+const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
 
 function fileName(){
   return '销售清单_' + (v('customer') || '客户') + '_' + (v('date') || todayStr()) + '.png';
@@ -1036,18 +1044,28 @@ async function canvasFile(){
 /* 保存：安卓/电脑直接落到相册（下载目录），iOS 走系统面板「存储图像」 */
 async function saveImage(){
   const file = await canvasFile();
+  /* 微信/企微内置浏览器会拦截下载，先提示改用系统浏览器 */
+  if(isWeChat){
+    toast('微信内无法保存，请点右上角「在浏览器打开」后再保存');
+    return;
+  }
+  /* iPhone/iPad：只能经由系统分享面板存进相册 */
   if(isIOS && navigator.canShare && navigator.canShare({ files: [file] })){
     try {
       await navigator.share({ files: [file], title: '销售清单' });
       return;
     } catch(e){ if(e && e.name === 'AbortError') return; }
   }
+  /* 安卓/电脑：走浏览器下载，文件落在「下载/文件」里 */
   const url = URL.createObjectURL(file);
   const a = document.createElement('a');
   a.href = url; a.download = file.name;
+  a.rel = 'noopener';
   document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 8000);
-  toast('图片已保存到相册');
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+  toast(isAndroid
+    ? '已存到「文件/下载」；要进相册请点图片长按保存'
+    : '图片已下载，可在下载文件夹查看');
 }
 
 /* 分享：直接把 PNG 文件分享出去 */
