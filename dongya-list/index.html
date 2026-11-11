@@ -695,7 +695,7 @@ const C = {
   line:'#EDEAE8', edge:'#D8D4D1',
   head:'#F7F4F3', zebra:'#FCFBFA', total:'#FBF5F3'
 };
-const HEAD_H = 42, ROW_H = 36, TOT_H = 48, TABLE_TOP = 166, QR_SIZE = 64;
+const HEAD_H = 42, ROW_H = 36, TOT_H = 48, TABLE_TOP = 152, QR_SIZE = 112;
 
 const COLS = [
   {key:'idx',     label:'序号',     w:44,  align:'center'},  /* 序号居中 */
@@ -784,7 +784,7 @@ function draw(){
   ctx.fillText(SUB, (W - sw) / 2, 81);
   ctx.restore();
 
-  const qx = W - M - QR_SIZE, qy = 26;
+  const qx = W - M - QR_SIZE, qy = 22;
   if(qrImg){
     ctx.drawImage(qrImg, qx, qy, QR_SIZE, QR_SIZE);
   } else {
@@ -794,7 +794,7 @@ function draw(){
     ctx.setLineDash([4, 3]);
     ctx.strokeRect(qx + 0.5, qy + 0.5, QR_SIZE - 1, QR_SIZE - 1);
     ctx.setLineDash([]);
-    font(10);
+    font(11);
     ctx.fillStyle = '#7E7973';
     ctx.textAlign = 'center';
     ctx.fillText('二维码', qx + QR_SIZE / 2, qy + QR_SIZE / 2 + 3.5);
@@ -802,7 +802,7 @@ function draw(){
   }
 
   ctx.strokeStyle = C.line;
-  hl(M, 96, M + CW);
+  hl(M, 96, qx - 12);   /* 分隔线止于二维码左侧，二维码横跨标题与信息行 */
 
   /* ---------- 客户信息 ---------- */
   function kv(label, value, x, baseline, maxW){
@@ -814,7 +814,7 @@ function draw(){
     let t = String(value == null ? '' : value);
     let size = 14;
     font(size, 700);
-    while(size > 12 && ctx.measureText(t).width > avail){
+    while(size > 10.5 && ctx.measureText(t).width > avail){
       size -= 1;
       font(size, 700);
     }
@@ -822,7 +822,7 @@ function draw(){
     t = fitText(t, avail);
     if(t) ctx.fillText(t, x + lw + 8, baseline);
   }
-  const GAP = 24, COLW = (CW - GAP) / 2, RX = M + COLW + GAP;
+  const GAP = 24, COLW = (CW - QR_SIZE - 12 - GAP) / 2, RX = M + COLW + GAP;
   /* 两行信息行距收紧到与字号相当（约 1.4 倍字体高），上下与标题/表格靠紧 */
   const ROW1 = 118, ROW2 = ROW1 + 20;
   kv('客户名称', v('customer'), M,  ROW1, COLW);
