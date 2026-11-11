@@ -6,10 +6,6 @@
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" href="icon-192-v2.png">
-<link rel="apple-touch-icon" href="icon-180-v2.png">
-<meta name="apple-mobile-web-app-title" content="销售清单">
 <title>销售清单 · 东亚汽车玻璃</title>
 <style>
   :root{
@@ -824,6 +820,26 @@ function put(text, x, colW, baseline, align, pad){
   else if(align === 'center') tx = x + (colW - tw) / 2;
   ctx.fillText(t, tx, baseline);
 }
+/* 优先缩字号保完整：从 baseSize 逐级缩到 minSize，仍放不下才打省略号 */
+function putFit(text, x, colW, baseline, align, pad, baseSize, minSize, weight){
+  pad = pad === undefined ? 6 : pad;
+  const avail = Math.max(colW - pad * 2, 2);
+  text = String(text == null ? '' : text);
+  if(!text) return;
+  let size = baseSize;
+  font(size, weight || 500);
+  while(size > minSize && ctx.measureText(text).width > avail){
+    size -= 0.5;
+    font(size, weight || 500);
+  }
+  const t = fitText(text, avail);
+  if(!t) return;
+  const tw = ctx.measureText(t).width;
+  let tx = x + pad;
+  if(align === 'right') tx = x + colW - pad - tw;
+  else if(align === 'center') tx = x + (colW - tw) / 2;
+  ctx.fillText(t, tx, baseline);
+}
 function hl(x1, y, x2){ ctx.beginPath(); ctx.moveTo(x1, y + 0.5); ctx.lineTo(x2, y + 0.5); ctx.stroke(); }
 function vl(x, y1, y2){ ctx.beginPath(); ctx.moveTo(x + 0.5, y1); ctx.lineTo(x + 0.5, y2); ctx.stroke(); }
 
@@ -848,7 +864,7 @@ function draw(){
   });
   /* ---------- 动态列宽：备注/产品名称随内容加宽，其余列相应收缩，表格外框总宽不变 ---------- */
   const BASE_W = [44, 118, 246, 76, 46, 46, 76, 100];
-  const MIN_W  = [40, 118, 246, 64, 36, 36, 62, 78];
+  const MIN_W  = [40, 118, 246, 40, 36, 36, 62, 78];
   font(14, 500);
   let needPlate = 0, needProd = 0;
   rows.forEach(r => {
@@ -967,15 +983,20 @@ function draw(){
 
   font(13, 700);
   ctx.fillStyle = C.ink;
-  COLS.forEach((c, i) => put(c.label, cx[i], c.w, T + Math.round(HEAD_H * 0.64), 'center', 5));  /* 表头统一居中 */
+  COLS.forEach((c, i) => putFit(c.label, cx[i], c.w, T + Math.round(HEAD_H * 0.64), 'center', 5, 13, 8.5, 700));  /* 表头统一居中，窄列自动缩字号 */
 
   rows.forEach((r, ri) => {
     const baseline = bodyTop + ROW_H * ri + Math.round(ROW_H * 0.67);
     COLS.forEach((c, ci) => {
       const isNum = c.key === 'price' || c.key === 'amount';
-      font(14, isNum ? 700 : 500);
       ctx.fillStyle = C.ink;
-      put(r[c.key], cx[ci], c.w, baseline, c.align, (c.key === 'plate' || c.key === 'product') ? 6 : 10);
+      if(c.key === 'plate' || c.key === 'product'){
+        /* 备注/产品名称：先靠动态列宽，仍放不下则缩字号，保证内容完整显示 */
+        putFit(r[c.key], cx[ci], c.w, baseline, c.align, 6, 14, 9, 500);
+      } else {
+        font(14, isNum ? 700 : 500);
+        put(r[c.key], cx[ci], c.w, baseline, c.align, 10);
+      }
     });
   });
 
@@ -1169,13 +1190,6 @@ refreshCustList();
 renderItems();
 window.__appReady = true;
 draw();
-</script>
-<script>
-if('serviceWorker' in navigator){
-  addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  });
-}
 </script>
 </body>
 </html>
