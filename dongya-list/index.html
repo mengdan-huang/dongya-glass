@@ -99,17 +99,19 @@
   .field input::placeholder{color:#c3c7cd;}
   .field input:focus{outline:none;}
   .field input{min-width:0;max-width:100%;}
-  /* 二维码选择按钮：避开原生文件框在手机上溢出/被遮挡的问题 */
-  .qr-pick{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:4px;
-    padding:7px 14px;border-radius:18px;border:1px solid #e6e2df;background:#fff;color:#1c1e22;
-    font-size:13px;font-weight:500;font-family:inherit;line-height:1.2;cursor:pointer;}
-  /* 透明文件框铺满按钮：手机上点哪儿都能唤起系统相册/文件选择 */
-  .qr-pick input[type=file]{position:absolute;left:0;top:0;width:100%;height:100%;
-    opacity:0;font-size:0;border:none;padding:0;margin:0;cursor:pointer;}
-  .qr-pick:active{background:#faf8f7;border-color:#ded9d5;}
-  .qr-clear{display:inline-block;margin-left:10px;font-size:12px;color:#c0392b;
-    text-decoration:underline;cursor:pointer;}
+  /* 二维码：可见的原生文件按钮（各手机浏览器兼容性最好） */
+  .qr-file{display:block;width:100%;max-width:100%;
+    font-size:12.5px;color:#6b717a;font-family:inherit;}
+  .qr-file::file-selector-button{
+    border:1px solid #e6e2df;background:#fff;color:#1c1e22;
+    font-size:13px;font-weight:500;font-family:inherit;
+    padding:8px 16px;border-radius:18px;margin-right:10px;cursor:pointer;}
+  .qr-file::file-selector-button:active{background:#faf8f7;border-color:#ded9d5;}
+  .qr-row{display:flex;align-items:center;gap:10px;margin-top:8px;}
+  #qrPrev{width:44px;height:44px;border-radius:8px;border:1px solid #e6e2df;background:#fff;object-fit:cover;}
+  .qr-clear{font-size:12px;color:#c0392b;text-decoration:underline;cursor:pointer;}
   .qr-clear[hidden]{display:none;}
+  #qrPrev[hidden]{display:none;}
   .qr-hint{margin-top:8px;font-size:11.5px;color:#8b9099;}
   /* 展开时给底部操作栏留出空间，避免二维码字段被压住点不到 */
   details.more[open]{margin-bottom:64px;}
@@ -355,10 +357,12 @@
           <div class="field"><label>温馨提示</label>
             <input id="snote" value="玻璃属易碎品，取货时请确认货物数量和质量（划伤、爆边、裂隙等），逾时造成的损失由顾客自行承担！"></div>
           <div class="field"><label>右上角二维码</label>
-            <label class="qr-pick" for="qr"><span id="qrPickText">＋ 选择二维码图片</span>
-              <input id="qr" type="file" accept="image/*"></label>
-            <span id="qrClear" class="qr-clear" hidden>清除</span>
-            <div class="qr-hint">选一次即自动保存，之后每次开单自动沿用</div></div>
+            <input id="qr" type="file" accept="image/*" class="qr-file">
+            <div class="qr-row">
+              <img id="qrPrev" alt="" hidden>
+              <span id="qrClear" class="qr-clear" hidden>清除二维码</span>
+            </div>
+            <div class="qr-hint">点按钮选一张，即自动保存，之后每次开单自动沿用</div></div>
         </div>
       </details>
 
@@ -621,8 +625,9 @@ function setQr(src, persist){
   const img = new Image();
   img.onload = () => {
     qrImg = img;
+    $('qrPrev').src = src;
+    $('qrPrev').hidden = false;
     $('qrClear').hidden = false;
-    $('qrPickText').textContent = '更换二维码图片';
     draw();
   };
   img.src = src;
@@ -652,6 +657,7 @@ function normalizeQr(file){
     im.src = url;
   });
 }
+$('qr').addEventListener('click', () => { toast('正在打开图片选择…'); });
 $('qr').addEventListener('change', async e => {
   const f = e.target.files[0];
   if(!f) return;
@@ -669,7 +675,8 @@ $('qrClear').addEventListener('click', () => {
   qrImg = null;
   try{ localStorage.removeItem(QR_KEY); }catch(err){}
   $('qrClear').hidden = true;
-  $('qrPickText').textContent = '＋ 选择二维码图片';
+  $('qrPrev').hidden = true;
+  $('qrPrev').src = '';
   $('qr').value = '';
   draw();
   toast('二维码已清除');
