@@ -438,7 +438,7 @@ function todayStr(){
 function v(id){ return $(id).value.trim(); }
 function setv(id, val){ if(val !== undefined && val !== null) $(id).value = val; }
 function newItem(){ return { plate:'', product:'', brand:'', unit:'块', qty:1, price:'' }; }
-let items = [newItem(), newItem()];
+let items = [newItem()];
 
 function toast(msg){
   const t = $('toast');
@@ -691,7 +691,7 @@ const QR_DEFAULT = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwCAIAAA
 })();
 $('newBtn').addEventListener('click', () => {
   if(!confirm('清空当前内容，开始新的一张清单？')) return;
-  items = [newItem(), newItem()];
+  items = [newItem()];
   currentId = null;
   setv('customer',''); setv('cphone',''); setv('caddr','');
   setv('date', todayStr());
