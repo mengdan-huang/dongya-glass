@@ -231,6 +231,11 @@ input[type="date"]{font-family:inherit}
 .search-input-wrap input{width:100%;padding:11px 12px 11px 38px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;background:var(--card);box-shadow:var(--shadow);font-family:inherit}
 .search-input-wrap input:focus{outline:none;border-color:var(--primary)}
 .search-input-wrap .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text-3)}
+.search-fields{margin-bottom:12px}
+.search-field{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.search-field .sf-label{flex:0 0 auto;width:36px;text-align:center;font-size:13px;font-weight:700;color:var(--primary);background:rgba(37,99,235,.08);border-radius:6px;padding:6px 0}
+.search-field input{flex:1;width:0;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;background:var(--card);box-shadow:var(--shadow);font-family:inherit}
+.search-field input:focus{outline:none;border-color:var(--primary)}
 
 .search-summary{background:var(--card);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:10px;display:flex;justify-content:space-around}
 .search-summary-item{text-align:center}
@@ -486,20 +491,19 @@ input[type="date"]{font-family:inherit}
 
 <!-- ===== Tab 3: 搜索查询 ===== -->
 <div class="tab-content" id="tab-search">
-  <div class="search-bar">
-    <div class="search-type">
-      <button class="active" id="searchTypeCustomer" onclick="setSearchType('customer')">按客户</button>
-      <button id="searchTypePlate" onclick="setSearchType('plate')">按车牌</button>
-      <button id="searchTypeProduct" onclick="setSearchType('product')">按货品</button>
+  <div class="search-fields">
+    <div class="search-field">
+      <span class="sf-label">客户</span>
+      <input type="text" id="searchCustomer" placeholder="输入客户名称" autocomplete="off" oninput="doSearch()">
     </div>
-  </div>
-  <div class="search-input-wrap" style="margin-bottom:8px">
-    <span class="search-icon">🔍</span>
-    <input type="text" id="searchInput" placeholder="输入客户名称搜索" autocomplete="off" oninput="doSearch()">
-  </div>
-  <div class="search-input-wrap" style="margin-bottom:12px">
-    <span class="search-icon" id="searchField2Icon" style="font-size:14px;font-weight:700;color:var(--primary)">＋</span>
-    <input type="text" id="searchInput2" placeholder="选填：再输入货品名同时筛选" autocomplete="off" oninput="doSearch()">
+    <div class="search-field">
+      <span class="sf-label">车牌</span>
+      <input type="text" id="searchPlate" placeholder="输入车牌号码" autocomplete="off" oninput="doSearch()">
+    </div>
+    <div class="search-field">
+      <span class="sf-label">货品</span>
+      <input type="text" id="searchProduct" placeholder="输入货品名称" autocomplete="off" oninput="doSearch()">
+    </div>
   </div>
   <div id="searchResults"></div>
 </div>
@@ -710,7 +714,6 @@ input[type="date"]{font-family:inherit}
 var STORAGE_KEY = 'dongya_glass_sales';
 var records = [];
 var currentFilter = 'all';
-var searchType = 'customer';
 var formState = { monthly: false, importMonthly: false };
 var importPreviewData = [];
 var recordsMonthFilter = null; // null=全部, 'YYYY-MM'=按月
@@ -1859,43 +1862,23 @@ function saveItemEdit(){
 }
 
 /* ========== 搜索功能 ========== */
-function setSearchType(type){
-  searchType = type;
-  document.getElementById('searchTypeCustomer').classList.toggle('active', type==='customer');
-  document.getElementById('searchTypePlate').classList.toggle('active', type==='plate');
-  document.getElementById('searchTypeProduct').classList.toggle('active', type==='product');
-  var input = document.getElementById('searchInput');
-  var input2 = document.getElementById('searchInput2');
-  var placeholders = {customer:'输入客户名称搜索', plate:'输入车牌号码搜索', product:'输入货品名称搜索'};
-  var placeholders2 = {customer:'选填：再输入货品名同时筛选', plate:'选填：再输入客户名同时筛选', product:'选填：再输入客户名同时筛选'};
-  input.placeholder = placeholders[type];
-  input2.placeholder = placeholders2[type];
-  input.value = '';
-  input2.value = '';
-  doSearch();
-}
-
 function doSearch(){
-  var kw1 = document.getElementById('searchInput').value.trim().toLowerCase();
-  var kw2 = document.getElementById('searchInput2').value.trim().toLowerCase();
+  var kwC = document.getElementById('searchCustomer').value.trim().toLowerCase();
+  var kwP = document.getElementById('searchPlate').value.trim().toLowerCase();
+  var kwG = document.getElementById('searchProduct').value.trim().toLowerCase();
   var container = document.getElementById('searchResults');
 
-  if(!kw1 && !kw2){
-    container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><div class="text">输入关键词开始搜索</div></div>';
+  if(!kwC && !kwP && !kwG){
+    container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><div class="text">输入客户 / 车牌 / 货品开始搜索</div></div>';
     return;
   }
 
   var allItems = getAllItems();
   var matched = allItems.filter(function(it){
-    // 条件1：按搜索类型匹配主字段
-    var f1;
-    if(searchType==='customer') f1 = it.customer;
-    else if(searchType==='plate') f1 = it.plate || '';
-    else f1 = it.product;
-    if(kw1 && f1.toLowerCase().indexOf(kw1) === -1) return false;
-    // 条件2：附加筛选（客户搜索/车牌搜索时配货品名，货品搜索时配客户名）
-    var f2 = (searchType==='product') ? it.customer : it.product;
-    if(kw2 && f2.toLowerCase().indexOf(kw2) === -1) return false;
+    // 三个框任意组合，同时满足所有已填条件（AND 交集）
+    if(kwC && it.customer.toLowerCase().indexOf(kwC) === -1) return false;
+    if(kwP && (it.plate || '').toLowerCase().indexOf(kwP) === -1) return false;
+    if(kwG && it.product.toLowerCase().indexOf(kwG) === -1) return false;
     return true;
   });
 
